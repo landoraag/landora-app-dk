@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'" />
+<title>Compartilhar tela</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Segoe UI, system-ui, sans-serif; background: #0a0a0a; color: #f2f4f8; padding: 18px; }
+  h1 { font-size: 1.05rem; margin: 0 0 4px; }
+  p { margin: 0 0 14px; color: #8b95a7; font-size: 0.85rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; max-height: 410px; overflow: auto; padding-right: 4px; }
+  .item { background: #121826; border: 2px solid #1f2937; border-radius: 10px; padding: 8px; cursor: pointer; text-align: left; color: inherit; }
+  .item:hover { border-color: #3b82f6; }
+  .item img { width: 100%; border-radius: 6px; display: block; background: #000; }
+  .item span { display: block; margin-top: 6px; font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .foot { margin-top: 14px; text-align: right; }
+  button.cancel { background: transparent; color: #8b95a7; border: 1px solid #1f2937; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+  button.cancel:hover { color: #fff; }
+</style>
+</head>
+<body>
+  <h1>O que você quer compartilhar?</h1>
+  <p>Escolha uma tela inteira ou uma janela. O som do computador também é enviado.</p>
+  <div class="grid" id="grid"><p>Carregando…</p></div>
+  <div class="foot"><button class="cancel" id="cancel">Cancelar</button></div>
+<script>
+  document.getElementById("cancel").onclick = () => window.picker.cancel();
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") window.picker.cancel(); });
+  window.picker.getSources().then((sources) => {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    sources.forEach((s) => {
+      const b = document.createElement("button");
+      b.className = "item";
+      const img = document.createElement("img");
+      img.src = s.thumb;
+      const label = document.createElement("span");
+      label.textContent = s.name;
+      b.append(img, label);
+      b.onclick = () => window.picker.choose(s.id);
+      grid.appendChild(b);
+    });
+  });
+</script>
+</body>
+</html>

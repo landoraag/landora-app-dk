@@ -1,0 +1,34 @@
+{
+  "name": "landora-desktop",
+  "version": "1.0.0",
+  "description": "Landora - Painel (aplicativo para Windows)",
+  "author": "Landora",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.landora.painel",
+    "productName": "Landora",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "picker-preload.js", "picker.html", "offline.html", "build/icon.png", "package.json"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Landora",
+      "artifactName": "Landora-Setup.${ext}"
+    }
+  }
+}
