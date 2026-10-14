@@ -65,7 +65,7 @@ a { color: inherit; }
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   text-align: center;
 }
-.auth-logo { width: 100%; max-width: 220px; margin: 0 auto 18px; display: block; }
+.auth-logo { width: 100%; max-width: 280px; margin: 0 auto 18px; display: block; }
 .auth-sub { color: var(--gray-soft); margin: 0 0 26px; font-size: 0.9rem; }
 .auth-form { display: flex; flex-direction: column; gap: 16px; text-align: left; }
 .auth-form label { display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; color: var(--gray-soft); }
@@ -117,7 +117,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue-light)
     padding: 24px 0;
   }
   .side-brand { padding: 0 22px 22px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
-  .side-brand img { width: 100%; max-width: 140px; }
+  .side-brand img { width: 100%; max-width: 186px; }
   .side-nav { display: flex; flex-direction: column; flex: 1; gap: 2px; }
   .side-link { display: flex; align-items: center; gap: 10px; padding: 10px 22px; color: var(--gray-soft); text-decoration: none; font-size: 0.92rem; border-left: 3px solid transparent; }
   .side-link:hover { color: var(--text); }
@@ -268,7 +268,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue-light)
 /* ---------- Reports ---------- */
 .report-sheet { background: var(--black); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
 .report-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.report-header img { width: 90px; }
+.report-header img { width: 170px; }
 .report-header h3 { font-size: 1.1rem; }
 
 /* ---------- Calls ---------- */
