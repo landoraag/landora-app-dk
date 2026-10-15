@@ -5,6 +5,8 @@
 // - O Firestore é usado só no começo, para os navegadores "se apresentarem" (sinalização).
 //   Depois que conectou, o Firestore não participa mais do áudio/vídeo.
 // - Topologia "mesh": cada pessoa se conecta com todas as outras. Ótimo para 2 a 4 pessoas.
+// - Anti-ruído do microfone: DeepFilterNet3 (IA) rodando no próprio navegador, antes de a voz
+//   ser enviada. Se o navegador não suportar, cai para o filtro padrão do navegador.
 //
 // Estrutura no Firestore:
 //   calls/{callId}                         -> { name, fixed, createdBy, createdAt }
@@ -23,6 +25,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
+import { DeepFilterNet3Core } from "deepfilternet3-noise-filter";
 import { db } from "./firebase";
 import { playSound, unlockSounds } from "./sounds";
 
@@ -34,6 +37,10 @@ const SLOT_KIND = { audio: "audio", cam: "video", screen: "video", screenAudio: 
 
 // "detail" deixa texto/interface nítidos; troque para "motion" se for compartilhar jogo/vídeo.
 const SCREEN_CONTENT_HINT = "detail";
+
+// Força do anti-ruído (0 a 100). Mais alto corta mais barulho; perto de 100 a voz pode soar
+// um pouco "seca". 80 é um bom equilíbrio.
+const NOISE_LEVEL = 80;
 
 const HEARTBEAT_MS = 15000;
 const STALE_MS = 45000;
@@ -117,27 +124,100 @@ export class CallSession {
     const savedQuality = loadPref("quality", "equilibrada");
     this.quality = QUALITY[savedQuality] ? savedQuality : "equilibrada";
     this.noiseOn = loadPref("noise", "on") !== "off"; // anti-ruído do microfone
+    this.noiseLoading = false; // true enquanto o modelo de IA do anti-ruído carrega
+    this._dfnFailed = false; // se o DeepFilterNet não rodar neste navegador, não tenta de novo
+    this._chains = new Map(); // faixa processada -> { raw, ctx, proc } (para desligar tudo direito)
     this.micId = loadPref("micId", ""); // microfone escolhido ("" = padrão do sistema)
   }
 
-  _audioConstraints() {
-    const c = { echoCancellation: true, noiseSuppression: this.noiseOn, autoGainControl: true };
+  // browserNS = usar o filtro de ruído embutido do navegador (só como plano B).
+  _audioConstraints(browserNS) {
+    const c = {
+      echoCancellation: true,
+      noiseSuppression: !!browserNS,
+      autoGainControl: true,
+      channelCount: { ideal: 1 },
+      sampleRate: { ideal: 48000 },
+    };
     if (this.micId) c.deviceId = { exact: this.micId };
     return c;
   }
 
   // Abre o microfone escolhido; se ele não existir mais (desconectado), volta para o padrão do sistema.
-  async _getMic() {
+  async _openRawMic(browserNS) {
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio: this._audioConstraints() });
+      return await navigator.mediaDevices.getUserMedia({ audio: this._audioConstraints(browserNS) });
     } catch (e) {
       if (this.micId && (e.name === "OverconstrainedError" || e.name === "NotFoundError")) {
         this.micId = "";
         savePref("micId", "");
-        return await navigator.mediaDevices.getUserMedia({ audio: this._audioConstraints() });
+        return await navigator.mediaDevices.getUserMedia({ audio: this._audioConstraints(browserNS) });
       }
       throw e;
     }
+  }
+
+  // Devolve um MediaStream com a faixa de voz já pronta para enviar.
+  // Anti-ruído ligado: microfone -> DeepFilterNet3 -> faixa limpa.
+  async _getMic() {
+    // Anti-ruído desligado: voz crua, sem nenhum filtro de ruído.
+    if (!this.noiseOn) return this._openRawMic(false);
+    // A IA já falhou antes neste navegador: usa o filtro padrão do navegador.
+    if (this._dfnFailed) return this._openRawMic(true);
+
+    const raw = await this._openRawMic(false);
+    let ctx = null;
+    let proc = null;
+    this.noiseLoading = true;
+    this.onChange();
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+      proc = new DeepFilterNet3Core({ sampleRate: 48000, noiseReductionLevel: NOISE_LEVEL });
+      await proc.initialize();
+      const node = await proc.createAudioWorkletNode(ctx);
+      proc.setSuppressionLevel(NOISE_LEVEL);
+
+      const src = ctx.createMediaStreamSource(raw);
+      const dst = ctx.createMediaStreamDestination();
+      src.connect(node).connect(dst);
+      if (ctx.state === "suspended") await ctx.resume();
+
+      const out = dst.stream.getAudioTracks()[0];
+      if (!out) throw new Error("O anti-ruído não gerou faixa de áudio.");
+      this._chains.set(out, { raw, ctx, proc });
+      return dst.stream;
+    } catch (e) {
+      console.warn("DeepFilterNet indisponível, usando o filtro do navegador:", e);
+      this._dfnFailed = true;
+      this.notice = "O anti-ruído avançado não funcionou neste navegador. Usando o filtro padrão.";
+      try {
+        proc?.destroy();
+      } catch {
+        /* já encerrado */
+      }
+      ctx?.close().catch(() => {});
+      raw.getTracks().forEach((t) => t.stop());
+      return this._openRawMic(true);
+    } finally {
+      this.noiseLoading = false;
+      this.onChange();
+    }
+  }
+
+  // Para uma faixa de voz e desmonta o anti-ruído ligado a ela (se houver).
+  _stopAudioTrack(track) {
+    if (!track) return;
+    track.stop();
+    const chain = this._chains.get(track);
+    if (!chain) return;
+    this._chains.delete(track);
+    chain.raw.getTracks().forEach((t) => t.stop());
+    try {
+      chain.proc.destroy();
+    } catch {
+      /* já encerrado */
+    }
+    chain.ctx.close().catch(() => {});
   }
 
   // Troca o microfone durante a call.
@@ -151,7 +231,7 @@ export class CallSession {
     fresh.enabled = wasOn;
     this.notice = "";
     await this._setLocalTrack("audio", fresh);
-    if (old) old.stop();
+    this._stopAudioTrack(old);
     await this._push();
   }
 
@@ -214,7 +294,8 @@ export class CallSession {
     this.unsubs.forEach((u) => u());
     this.unsubs = [];
     for (const id of [...this.peers.keys()]) this._dropPeer(id, true);
-    Object.values(this.local).forEach((t) => t && t.stop());
+    this._stopAudioTrack(this.local.audio);
+    ["cam", "screen", "screenAudio"].forEach((k) => this.local[k] && this.local[k].stop());
     this.local = { audio: null, cam: null, screen: null, screenAudio: null };
 
     try {
@@ -595,13 +676,13 @@ export class CallSession {
     savePref("noise", this.noiseOn ? "on" : "off");
     const old = this.local.audio;
     if (old) {
-      // Reabre o microfone com a nova configuração (funciona em todos os navegadores).
+      // Reabre o microfone com a nova configuração (liga ou desliga o anti-ruído de IA).
       const wasOn = old.enabled;
       const s = await this._getMic();
       const fresh = s.getAudioTracks()[0];
       fresh.enabled = wasOn;
       await this._setLocalTrack("audio", fresh);
-      old.stop();
+      this._stopAudioTrack(old);
     }
     this.onChange();
   }

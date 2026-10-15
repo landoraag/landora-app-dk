@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useCall } from "../../context/CallContext";
 import Avatar from "../Avatar";
 import { QUALITY_OPTIONS } from "../../lib/webrtc";
+import VolumeMenu from "./VolumeMenu";
 
 const CAN_SHARE = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
 
@@ -139,64 +140,6 @@ function Lobby({ calls }) {
 }
 
 /* ---------------- Dentro da call ---------------- */
-// Menu que abre com o botão direito (ou no botão 🔊) sobre uma pessoa: volume da voz e da tela dela.
-function VolumeMenu({ menu, onClose }) {
-  const { getVolume, setVolume } = useCall();
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const left = Math.max(8, Math.min(menu.x, window.innerWidth - 270));
-  const top = Math.max(8, Math.min(menu.y, window.innerHeight - 210));
-  const row = (label, kind) => {
-    const v = getVolume(menu.uid, kind);
-    return (
-      <label className="vmenu-row">
-        <span>
-          {label} <b>{Math.round(v * 100)}%</b>
-        </span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="5"
-          value={Math.round(v * 100)}
-          onChange={(e) => setVolume(menu.uid, kind, Number(e.target.value) / 100)}
-        />
-      </label>
-    );
-  };
-
-  return (
-    <div
-      className="vmenu-backdrop"
-      onClick={onClose}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-    >
-      <div className="vmenu" style={{ left, top }} onClick={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
-        <div className="vmenu-title">{menu.name}</div>
-        {row("🔊 Voz", "voice")}
-        {menu.hasScreen && row("🖥️ Transmissão de tela", "screen")}
-        <button
-          type="button"
-          className="btn-link"
-          onClick={() => {
-            setVolume(menu.uid, "voice", 1);
-            setVolume(menu.uid, "screen", 1);
-          }}
-        >
-          Restaurar para 100%
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function useAudioDevices() {
   const [devices, setDevices] = useState({ inputs: [], outputs: [] });
   useEffect(() => {
@@ -414,9 +357,10 @@ function InCall() {
         <button
           className={"ctrl-btn " + (session.noiseOn ? "on" : "")}
           onClick={toggleNoise}
-          title="Reduz ruído de fundo (teclado, ventilador, barulho da rua)"
+          disabled={session.noiseLoading}
+          title="Reduz ruído de fundo com IA (teclado, ventilador, barulho da rua)"
         >
-          {session.noiseOn ? "🎧 Anti-ruído: ligado" : "🎧 Anti-ruído: desligado"}
+          {session.noiseLoading ? "🎧 Anti-ruído: carregando…" : session.noiseOn ? "🎧 Anti-ruído IA: ligado" : "🎧 Anti-ruído IA: desligado"}
         </button>
         <label className="ctrl-select" title="Qualidade da câmera e da tela que você transmite">
           <span>Qualidade</span>

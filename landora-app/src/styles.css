@@ -383,3 +383,361 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue-light)
 /* menu de baixo (celular) com 8 abas */
 .bottom-link { min-width: 0; padding: 4px 2px; }
 .bottom-label { font-size: 0.58rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Menu de volume (clique direito numa pessoa da call).
+   Cole no fim do seu CSS principal. As variáveis têm valor padrão:
+   se o app já usa --panel, --border, --text e --accent, elas são aproveitadas. */
+
+.vm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.vm-card {
+  position: fixed;
+  padding: 14px 16px 12px;
+  border-radius: 14px;
+  background: var(--panel, #1c1d23);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  color: var(--text, #f2f2f5);
+  transform-origin: top left;
+  animation: vm-in 0.12s ease-out;
+}
+
+@keyframes vm-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.vm-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.vm-mute {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.vm-mute:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.vm-mute.is-muted {
+  border-color: #e5484d;
+  background: rgba(229, 72, 77, 0.18);
+}
+.vm-mute:focus-visible,
+.vm-reset:focus-visible {
+  outline: 2px solid var(--accent, #7c5cff);
+  outline-offset: 2px;
+}
+
+.vm-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vm-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 7px;
+  opacity: 0.9;
+}
+.vm-label b {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+/* Slider com preenchimento. O --p vem do componente (ex: 65%). */
+.vm-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(
+    90deg,
+    var(--accent, #7c5cff) 0,
+    var(--accent, #7c5cff) var(--p, 100%),
+    rgba(255, 255, 255, 0.16) var(--p, 100%),
+    rgba(255, 255, 255, 0.16) 100%
+  );
+}
+.vm-slider:focus-visible {
+  outline: 2px solid var(--accent, #7c5cff);
+  outline-offset: 4px;
+}
+.vm-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+}
+.vm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s;
+}
+.vm-slider:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+.vm-slider::-moz-range-track {
+  height: 6px;
+  background: transparent;
+}
+.vm-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.vm-reset {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.vm-reset:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+.vm-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vm-card {
+    animation: none;
+  }
+  .vm-slider::-webkit-slider-thumb,
+  .vm-mute {
+    transition: none;
+  }
+}
+/* Menu de volume (clique direito numa pessoa da call).
+   Cole no fim do seu CSS principal. As variáveis têm valor padrão:
+   se o app já usa --panel, --border, --text e --accent, elas são aproveitadas. */
+
+.vm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.vm-card {
+  position: fixed;
+  padding: 14px 16px 12px;
+  border-radius: 14px;
+  background: var(--panel, #1c1d23);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  color: var(--text, #f2f2f5);
+  transform-origin: top left;
+  animation: vm-in 0.12s ease-out;
+}
+
+@keyframes vm-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.vm-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.vm-mute {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.vm-mute:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.vm-mute.is-muted {
+  border-color: #e5484d;
+  background: rgba(229, 72, 77, 0.18);
+}
+.vm-mute:focus-visible,
+.vm-reset:focus-visible {
+  outline: 2px solid var(--accent, #7c5cff);
+  outline-offset: 2px;
+}
+
+.vm-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vm-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 7px;
+  opacity: 0.9;
+}
+.vm-label b {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+/* Slider com preenchimento. O --p vem do componente (ex: 65%). */
+.vm-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(
+    90deg,
+    var(--accent, #7c5cff) 0,
+    var(--accent, #7c5cff) var(--p, 100%),
+    rgba(255, 255, 255, 0.16) var(--p, 100%),
+    rgba(255, 255, 255, 0.16) 100%
+  );
+}
+.vm-slider:focus-visible {
+  outline: 2px solid var(--accent, #7c5cff);
+  outline-offset: 4px;
+}
+.vm-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+}
+.vm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s;
+}
+.vm-slider:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+.vm-slider::-moz-range-track {
+  height: 6px;
+  background: transparent;
+}
+.vm-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.vm-reset {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.vm-reset:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+.vm-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vm-card {
+    animation: none;
+  }
+  .vm-slider::-webkit-slider-thumb,
+  .vm-mute {
+    transition: none;
+  }
+}
