@@ -92,7 +92,7 @@ export default function Relatorios() {
 
       <div ref={reportRef} className="report-sheet">
         <div className="report-header">
-          <img src="/logo.png" alt="Landora" />
+          <img src="/logomarca.png" alt="Landora" />
           <div>
             <h3>Relatório — {RANGES.find((r) => r.key === range)?.label || "Personalizado"}</h3>
             <span className="muted">Gerado em {formatDate(todayISO())}</span>

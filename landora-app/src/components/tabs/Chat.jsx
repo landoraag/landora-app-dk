@@ -4,6 +4,8 @@ import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
 import Avatar from "../Avatar";
+import { uploadImage } from "../../lib/cloudinary";
+import { shrinkImage } from "../../lib/image";
 
 export default function Chat() {
   const { data: categories } = useCollection("channelCategories", "createdAt", "asc");
@@ -20,6 +22,10 @@ export default function Chat() {
   const [newChannelFor, setNewChannelFor] = useState(null); // categoryId when creating
   const [newChannelName, setNewChannelName] = useState("");
   const bottomRef = useRef(null);
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
+  const [chatError, setChatError] = useState("");
 
   useEffect(() => {
     if (!activeChannel && channels.length > 0) setActiveChannel(channels[0]);
@@ -42,6 +48,46 @@ export default function Chat() {
       createdAt: serverTimestamp(),
     });
     setText("");
+  }
+
+  async function sendImage(file) {
+    if (!file || !activeChannel) return;
+    setChatError("");
+    if (!file.type.startsWith("image/")) return setChatError("Só dá para enviar imagens.");
+    if (file.size > 20 * 1024 * 1024) return setChatError("Imagem grande demais (máximo 20 MB).");
+    setUploading(true);
+    try {
+      const ready = await shrinkImage(file);
+      const { url } = await uploadImage(ready, "landora/chat");
+      await addDoc(collection(db, "chatMessages"), {
+        channelId: activeChannel.id,
+        text: text.trim(),
+        imageUrl: url,
+        senderId: user.uid,
+        senderNickname: profile?.nickname || "—",
+        createdAt: serverTimestamp(),
+      });
+      setText("");
+    } catch (err) {
+      console.error(err);
+      setChatError(err.message || "Não foi possível enviar a imagem.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function onPaste(e) {
+    const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith("image/"));
+    if (file) {
+      e.preventDefault();
+      sendImage(file);
+    }
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    const file = [...(e.dataTransfer?.files || [])].find((f) => f.type.startsWith("image/"));
+    if (file) sendImage(file);
   }
 
   async function createCategory(e) {
@@ -122,7 +168,7 @@ export default function Chat() {
         {categories.length === 0 && <p className="muted empty">Crie uma categoria pra começar.</p>}
       </aside>
 
-      <section className={"chat-main" + (!showSidebar ? " show" : "")}>
+      <section className={"chat-main" + (!showSidebar ? " show" : "")} onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
         <div className="chat-main-head">
           <button className="btn-link chat-back" onClick={() => setShowSidebar(true)}>‹ canais</button>
           <span>{activeChannel ? `# ${activeChannel.name}` : "Selecione um canal"}</span>
@@ -135,7 +181,10 @@ export default function Chat() {
                 <Avatar src={photos[m.senderId]} name={m.senderNickname} size={18} />
                 <span>{m.senderNickname}</span>
               </div>
-              <div className="chat-bubble-text">{m.text}</div>
+              {m.imageUrl && (
+                <img className="chat-img" src={m.imageUrl} alt="Imagem enviada" loading="lazy" onClick={() => setLightbox(m.imageUrl)} />
+              )}
+              {m.text && <div className="chat-bubble-text">{m.text}</div>}
             </div>
           ))}
           {activeChannel && messages.length === 0 && <p className="muted empty">Nenhuma mensagem em #{activeChannel.name} ainda.</p>}
@@ -143,12 +192,25 @@ export default function Chat() {
         </div>
 
         {activeChannel && (
-          <form onSubmit={handleSend} className="chat-form">
-            <input value={text} onChange={(e) => setText(e.target.value)} placeholder={`Mensagem em #${activeChannel.name}`} />
-            <button className="btn btn-gradient" type="submit">Enviar</button>
-          </form>
+          <>
+            {chatError && <p className="auth-error chat-error">{chatError}</p>}
+            <form onSubmit={handleSend} className="chat-form">
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { sendImage(e.target.files?.[0]); e.target.value = ""; }} />
+              <button type="button" className="chat-attach" disabled={uploading} onClick={() => fileRef.current?.click()} title="Enviar imagem (ou cole com Ctrl+V)">
+                {uploading ? "⏳" : "📎"}
+              </button>
+              <input value={text} onChange={(e) => setText(e.target.value)} onPaste={onPaste} placeholder={`Mensagem em #${activeChannel.name}`} />
+              <button className="btn btn-gradient" type="submit" disabled={uploading}>Enviar</button>
+            </form>
+          </>
         )}
       </section>
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="" />
+          <a href={lightbox} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Abrir original</a>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,10 +10,12 @@ import Relatorios from "../components/tabs/Relatorios";
 import Chat from "../components/tabs/Chat";
 import Calls from "../components/tabs/Calls";
 import Perfil from "../components/tabs/Perfil";
+import Leads from "../components/tabs/Leads";
 import Avatar from "../components/Avatar";
 
 const TABS = [
   { to: "/landing-pages", label: "Pages", icon: "🗂️" },
+  { to: "/leads", label: "Leads", icon: "🎯" },
   { to: "/clientes", label: "Clientes", icon: "👤" },
   { to: "/vendas", label: "Vendas", icon: "💰" },
   { to: "/financeiro", label: "Financeiro", icon: "📊" },
@@ -30,7 +32,7 @@ export default function Dashboard() {
       <div className="shell">
         <aside className="sidebar">
           <div className="side-brand">
-            <img src="/logo.png" alt="Landora" />
+            <img src="/logomarca.png" alt="Landora" />
           </div>
           <nav className="side-nav">
             {TABS.map((t) => (
@@ -57,6 +59,7 @@ export default function Dashboard() {
           <Routes>
             <Route path="/" element={<Navigate to="/landing-pages" replace />} />
             <Route path="/landing-pages" element={<LandingPages />} />
+            <Route path="/leads" element={<Leads />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/vendas" element={<Vendas />} />
             <Route path="/financeiro" element={<Financeiro />} />

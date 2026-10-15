@@ -27,7 +27,7 @@ export default function Login() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <img src="/logo.png" alt="Landora" className="auth-logo" />
+        <img src="/logomarca.png" alt="Landora" className="auth-logo" />
         <p className="auth-sub">Painel interno — acesso restrito à equipe.</p>
 
         <form onSubmit={handleSubmit} className="auth-form">

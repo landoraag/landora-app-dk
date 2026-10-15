@@ -5,6 +5,7 @@ import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
 import { useCall } from "../../context/CallContext";
 import Avatar from "../Avatar";
+import { QUALITY_OPTIONS } from "../../lib/webrtc";
 
 const CAN_SHARE = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
 
@@ -138,16 +139,151 @@ function Lobby({ calls }) {
 }
 
 /* ---------------- Dentro da call ---------------- */
-function ScreenTile({ s }) {
+// Menu que abre com o botão direito (ou no botão 🔊) sobre uma pessoa: volume da voz e da tela dela.
+function VolumeMenu({ menu, onClose }) {
+  const { getVolume, setVolume } = useCall();
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const left = Math.max(8, Math.min(menu.x, window.innerWidth - 270));
+  const top = Math.max(8, Math.min(menu.y, window.innerHeight - 210));
+  const row = (label, kind) => {
+    const v = getVolume(menu.uid, kind);
+    return (
+      <label className="vmenu-row">
+        <span>
+          {label} <b>{Math.round(v * 100)}%</b>
+        </span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={Math.round(v * 100)}
+          onChange={(e) => setVolume(menu.uid, kind, Number(e.target.value) / 100)}
+        />
+      </label>
+    );
+  };
+
+  return (
+    <div
+      className="vmenu-backdrop"
+      onClick={onClose}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div className="vmenu" style={{ left, top }} onClick={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
+        <div className="vmenu-title">{menu.name}</div>
+        {row("🔊 Voz", "voice")}
+        {menu.hasScreen && row("🖥️ Transmissão de tela", "screen")}
+        <button
+          type="button"
+          className="btn-link"
+          onClick={() => {
+            setVolume(menu.uid, "voice", 1);
+            setVolume(menu.uid, "screen", 1);
+          }}
+        >
+          Restaurar para 100%
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function useAudioDevices() {
+  const [devices, setDevices] = useState({ inputs: [], outputs: [] });
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const list = await navigator.mediaDevices.enumerateDevices();
+        if (!alive) return;
+        const real = (d) => d.deviceId && d.deviceId !== "default" && d.deviceId !== "communications";
+        setDevices({
+          inputs: list.filter((d) => d.kind === "audioinput" && real(d)),
+          outputs: list.filter((d) => d.kind === "audiooutput" && real(d)),
+        });
+      } catch {
+        /* sem acesso à lista */
+      }
+    };
+    load();
+    navigator.mediaDevices?.addEventListener?.("devicechange", load);
+    return () => {
+      alive = false;
+      navigator.mediaDevices?.removeEventListener?.("devicechange", load);
+    };
+  }, []);
+  return devices;
+}
+
+// Escolha do microfone (entrada) e do alto-falante/fone (saída).
+function AudioPanel({ onClose }) {
+  const { session, outputId, setOutputId, setMic } = useCall();
+  const { inputs, outputs } = useAudioDevices();
+  const canSink = typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
+  const currentMic = session?.local?.audio?.getSettings?.().deviceId || session?.micId || "";
+
+  return (
+    <div className="audio-panel">
+      <div className="audio-panel-head">
+        <b>Áudio</b>
+        <button type="button" className="btn-link" onClick={onClose}>
+          fechar
+        </button>
+      </div>
+      <label>
+        Microfone (entrada)
+        <select value={currentMic} onChange={(e) => setMic(e.target.value)}>
+          <option value="">Padrão do sistema</option>
+          {inputs.map((d, i) => (
+            <option key={d.deviceId} value={d.deviceId}>
+              {d.label || `Microfone ${i + 1}`}
+            </option>
+          ))}
+        </select>
+      </label>
+      {canSink ? (
+        <label>
+          Alto-falante ou fone (saída)
+          <select value={outputId} onChange={(e) => setOutputId(e.target.value)}>
+            <option value="">Padrão do sistema</option>
+            {outputs.map((d, i) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || `Saída ${i + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <p className="muted">Este navegador não permite escolher a saída de áudio.</p>
+      )}
+    </div>
+  );
+}
+
+function ScreenTile({ s, onMenu }) {
   const boxRef = useRef(null);
   return (
-    <div className="call-screen" ref={boxRef}>
+    <div className="call-screen" ref={boxRef} onContextMenu={onMenu}>
       {s.mine ? (
         <div className="call-screen-self">🖥️ Você está compartilhando a tela</div>
       ) : (
         <VideoTile track={s.track} />
       )}
       <div className="call-tile-name">🖥️ {s.nickname}</div>
+      {onMenu && (
+        <button type="button" className="vol-btn vol-left" onClick={onMenu} title="Volume">
+          🔊
+        </button>
+      )}
       {!s.mine && (
         <button className="call-fs" onClick={() => boxRef.current?.requestFullscreen?.()} title="Tela cheia">
           ⛶
@@ -164,9 +300,9 @@ function connLabel(p) {
   return " · conectando…";
 }
 
-function CamTile({ nickname, photoURL, camOn, micOn, track, mine, status }) {
+function CamTile({ nickname, photoURL, camOn, micOn, track, mine, status, onMenu }) {
   return (
-    <div className="call-tile">
+    <div className="call-tile" onContextMenu={onMenu}>
       {camOn && track ? (
         <VideoTile track={track} mirror={mine} />
       ) : (
@@ -178,12 +314,19 @@ function CamTile({ nickname, photoURL, camOn, micOn, track, mine, status }) {
         {!micOn ? " 🔇" : ""}
         {status || ""}
       </div>
+      {!mine && onMenu && (
+        <button type="button" className="vol-btn" onClick={onMenu} title="Volume">
+          🔊
+        </button>
+      )}
     </div>
   );
 }
 
 function InCall() {
-  const { active, status, error, session, toggleMic, toggleCam, toggleScreen, leave } = useCall();
+  const { active, status, error, session, toggleMic, toggleCam, toggleScreen, toggleNoise, setQuality, leave } = useCall();
+  const [menu, setMenu] = useState(null);
+  const [showAudio, setShowAudio] = useState(false);
   const [, setTick] = useState(0);
   // Atualiza a tela a cada 2s para o aviso de conexão mudar sozinho.
   useEffect(() => {
@@ -202,10 +345,16 @@ function InCall() {
   const peers = session.snapshot();
   const me = session.localView();
 
+  const openMenu = (e, info) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ x: e.clientX, y: e.clientY, ...info });
+  };
+
   const screens = [];
   if (me.screenOn) screens.push({ key: "me", mine: true, nickname: me.nickname });
   peers.forEach((p) => {
-    if (p.screenOn && p.tracks.screen) screens.push({ key: p.id, nickname: p.nickname, track: p.tracks.screen });
+    if (p.screenOn && p.tracks.screen) screens.push({ key: p.id, uid: p.uid, nickname: p.nickname, track: p.tracks.screen });
   });
 
   return (
@@ -224,7 +373,11 @@ function InCall() {
 
       <div className="call-stage">
         {screens.map((s) => (
-          <ScreenTile key={s.key} s={s} />
+          <ScreenTile
+            key={s.key}
+            s={s}
+            onMenu={s.uid ? (e) => openMenu(e, { uid: s.uid, name: s.nickname, hasScreen: true }) : undefined}
+          />
         ))}
         <div className="call-grid">
           <CamTile mine nickname={me.nickname} photoURL={me.photoURL} camOn={me.camOn} micOn={me.micOn} track={me.camTrack} />
@@ -237,6 +390,7 @@ function InCall() {
               micOn={p.micOn}
               track={p.tracks.cam}
               status={connLabel(p)}
+              onMenu={(e) => openMenu(e, { uid: p.uid, name: p.nickname, hasScreen: p.screenOn })}
             />
           ))}
         </div>
@@ -254,10 +408,32 @@ function InCall() {
             {me.screenOn ? "⏹ Parar tela" : "🖥️ Compartilhar tela"}
           </button>
         )}
+        <button className={"ctrl-btn " + (showAudio ? "on" : "")} onClick={() => setShowAudio((v) => !v)}>
+          ⚙️ Áudio
+        </button>
+        <button
+          className={"ctrl-btn " + (session.noiseOn ? "on" : "")}
+          onClick={toggleNoise}
+          title="Reduz ruído de fundo (teclado, ventilador, barulho da rua)"
+        >
+          {session.noiseOn ? "🎧 Anti-ruído: ligado" : "🎧 Anti-ruído: desligado"}
+        </button>
+        <label className="ctrl-select" title="Qualidade da câmera e da tela que você transmite">
+          <span>Qualidade</span>
+          <select value={session.quality} onChange={(e) => setQuality(e.target.value)}>
+            {QUALITY_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button className="ctrl-btn leave" onClick={leave}>
           Sair da call
         </button>
+        {showAudio && <AudioPanel onClose={() => setShowAudio(false)} />}
       </div>
+      {menu && <VolumeMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>
   );
 }

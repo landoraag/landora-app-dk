@@ -324,3 +324,62 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue-light)
 .profile-ok { color: var(--green); font-size: 0.85rem; margin: 6px 0 0; }
 .profile-logout { margin-top: 22px; }
 .chat-bubble-author { display: flex; align-items: center; gap: 6px; }
+
+.ctrl-select { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 4px 6px 4px 14px; font-size: 0.8rem; color: var(--gray-soft); }
+.ctrl-select select { background: transparent; border: none; color: var(--text); font-weight: 600; font-size: 0.85rem; padding: 6px 4px; cursor: pointer; }
+.ctrl-select select option { background: var(--surface-2); color: var(--text); }
+
+/* ---------- Leads ---------- */
+.modal-card.wide { max-width: 640px; }
+.leads-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.leads-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.leads-toolbar input, .leads-toolbar select, .lead-status-select select, .lp-form select, .lp-form textarea {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; font-family: inherit;
+}
+.leads-search { flex: 1; min-width: 220px; }
+.leads-count { font-size: 0.78rem; margin: 6px 0 12px; }
+.leads-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 600px) { .leads-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .leads-grid { grid-template-columns: repeat(3, 1fr); } }
+.lead-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s; }
+.lead-card:hover { transform: translateY(-2px); border-color: var(--blue-light); }
+.lead-cover { position: relative; aspect-ratio: 16 / 9; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; }
+.lead-cover > img:not(.lead-logo) { width: 100%; height: 100%; object-fit: cover; }
+.lead-logo { position: absolute; left: 10px; bottom: -18px; width: 46px; height: 46px; border-radius: 10px; object-fit: contain; background: #fff; border: 2px solid var(--surface); }
+.lead-body { padding: 24px 14px 14px; }
+.lead-company { font-weight: 700; font-size: 0.95rem; }
+.lead-name { font-size: 0.8rem; color: var(--gray-soft); }
+.lead-meta { font-size: 0.75rem; color: var(--gray-soft); margin-top: 6px; }
+.lead-status { position: absolute; top: 8px; right: 8px; font-size: 0.62rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; color: #fff; }
+.st-novo { background: #2563eb; } .st-contato { background: #d97706; } .st-proposta { background: #7c3aed; } .st-fechado { background: #16a34a; } .st-perdido { background: #dc2626; }
+.lead-view-photo { width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; margin-bottom: 14px; }
+.lead-view-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.lead-view-head h3 { margin: 0; }
+.lead-view-logo { width: 54px; height: 54px; border-radius: 10px; object-fit: contain; background: #fff; }
+.lead-status-select { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--gray-soft); margin-bottom: 14px; max-width: 220px; }
+.lead-details { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 0 0 18px; font-size: 0.88rem; }
+.lead-details dt { color: var(--gray-soft); } .lead-details dd { margin: 0; word-break: break-word; }
+.lead-details a { color: var(--blue-light); }
+.lead-notes { white-space: pre-wrap; }
+.lead-upload { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--gray-soft); }
+.lead-upload-box { background: var(--surface-2); border: 1px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.lead-upload-box.logo { height: 110px; } .lead-upload-box.photo { height: 110px; }
+.lead-upload-box img { width: 100%; height: 100%; object-fit: contain; } .lead-upload-box.photo img { object-fit: cover; }
+.lead-upload-box em { font-size: 0.75rem; }
+
+/* ---------- Calls: volume por pessoa e áudio ---------- */
+.vol-btn { position: absolute; top: 8px; right: 8px; z-index: 2; background: rgba(0,0,0,0.65); border: none; border-radius: 999px; color: #fff; cursor: pointer; font-size: 0.9rem; padding: 4px 9px; opacity: 0.8; }
+.vol-btn:hover { opacity: 1; } .vol-btn.vol-left { right: auto; left: 8px; }
+.vmenu-backdrop { position: fixed; inset: 0; z-index: 70; }
+.vmenu { position: fixed; width: 250px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 10px; }
+.vmenu-title { font-weight: 700; font-size: 0.9rem; }
+.vmenu-row { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--gray-soft); }
+.vmenu-row b { color: var(--text); } .vmenu-row input { width: 100%; accent-color: var(--blue-light); cursor: pointer; }
+.audio-panel { position: absolute; bottom: calc(100% + 10px); right: 12px; width: min(340px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.audio-panel-head { display: flex; justify-content: space-between; align-items: center; }
+.audio-panel label { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--gray-soft); }
+.audio-panel select { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 10px; font-size: 0.85rem; }
+
+/* menu de baixo (celular) com 8 abas */
+.bottom-link { min-width: 0; padding: 4px 2px; }
+.bottom-label { font-size: 0.58rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

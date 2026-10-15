@@ -37,7 +37,41 @@ const SCREEN_CONTENT_HINT = "detail";
 
 const HEARTBEAT_MS = 15000;
 const STALE_MS = 45000;
-const BITRATE = { cam: 1_800_000, screen: 5_000_000 };
+// Níveis de qualidade da câmera e da tela (resolução, quadros por segundo e velocidade máxima de envio).
+// Qualidade maior = imagem mais nítida, mas usa mais internet de quem transmite.
+const QUALITY = {
+  equilibrada: {
+    label: "Equilibrada",
+    cam: { w: 1280, h: 720, fps: 30, bps: 2_500_000 },
+    screen: { w: 1920, h: 1080, fps: 30, bps: 5_000_000 },
+  },
+  alta: {
+    label: "Alta",
+    cam: { w: 1920, h: 1080, fps: 30, bps: 4_000_000 },
+    screen: { w: 1920, h: 1080, fps: 60, bps: 8_000_000 },
+  },
+  maxima: {
+    label: "Máxima",
+    cam: { w: 1920, h: 1080, fps: 30, bps: 6_000_000 },
+    screen: { w: 2560, h: 1440, fps: 60, bps: 15_000_000 },
+  },
+};
+export const QUALITY_OPTIONS = Object.entries(QUALITY).map(([key, v]) => ({ key, label: v.label }));
+
+function loadPref(key, fallback) {
+  try {
+    return localStorage.getItem("landora.call." + key) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+function savePref(key, value) {
+  try {
+    localStorage.setItem("landora.call." + key, value);
+  } catch {
+    /* sem armazenamento: tudo bem */
+  }
+}
 
 function newId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -80,6 +114,45 @@ export class CallSession {
     this.seq = 0;
     this.closed = false;
     this.notice = "";
+    const savedQuality = loadPref("quality", "equilibrada");
+    this.quality = QUALITY[savedQuality] ? savedQuality : "equilibrada";
+    this.noiseOn = loadPref("noise", "on") !== "off"; // anti-ruído do microfone
+    this.micId = loadPref("micId", ""); // microfone escolhido ("" = padrão do sistema)
+  }
+
+  _audioConstraints() {
+    const c = { echoCancellation: true, noiseSuppression: this.noiseOn, autoGainControl: true };
+    if (this.micId) c.deviceId = { exact: this.micId };
+    return c;
+  }
+
+  // Abre o microfone escolhido; se ele não existir mais (desconectado), volta para o padrão do sistema.
+  async _getMic() {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: this._audioConstraints() });
+    } catch (e) {
+      if (this.micId && (e.name === "OverconstrainedError" || e.name === "NotFoundError")) {
+        this.micId = "";
+        savePref("micId", "");
+        return await navigator.mediaDevices.getUserMedia({ audio: this._audioConstraints() });
+      }
+      throw e;
+    }
+  }
+
+  // Troca o microfone durante a call.
+  async setMic(deviceId) {
+    this.micId = deviceId || "";
+    savePref("micId", this.micId);
+    const old = this.local.audio;
+    const wasOn = old ? old.enabled : true;
+    const s = await this._getMic();
+    const fresh = s.getAudioTracks()[0];
+    fresh.enabled = wasOn;
+    this.notice = "";
+    await this._setLocalTrack("audio", fresh);
+    if (old) old.stop();
+    await this._push();
   }
 
   // ---------- referências do Firestore ----------
@@ -104,9 +177,7 @@ export class CallSession {
   async join() {
     unlockSounds();
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      const s = await this._getMic();
       this.local.audio = s.getAudioTracks()[0] || null;
     } catch {
       this.notice = "Sem acesso ao microfone — você entrou só para ouvir. Libere o microfone no navegador e clique em 🎤.";
@@ -364,7 +435,8 @@ export class CallSession {
       try {
         const params = sender.getParameters();
         if (!params.encodings || !params.encodings.length) params.encodings = [{}];
-        params.encodings[0].maxBitrate = BITRATE[slot];
+        params.encodings[0].maxBitrate = QUALITY[this.quality][slot].bps;
+        params.encodings[0].maxFramerate = QUALITY[this.quality][slot].fps;
         await sender.setParameters(params);
       } catch {
         /* alguns navegadores não permitem ajustar */
@@ -472,9 +544,7 @@ export class CallSession {
 
   async toggleMic() {
     if (!this.local.audio) {
-      const s = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      const s = await this._getMic();
       this.notice = "";
       await this._setLocalTrack("audio", s.getAudioTracks()[0]);
     } else {
@@ -490,7 +560,7 @@ export class CallSession {
       t.stop();
     } else {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        video: { width: { ideal: QUALITY[this.quality].cam.w }, height: { ideal: QUALITY[this.quality].cam.h }, frameRate: { ideal: QUALITY[this.quality].cam.fps } },
       });
       const t = s.getVideoTracks()[0];
       t.contentHint = "motion";
@@ -503,8 +573,13 @@ export class CallSession {
   async toggleScreen() {
     if (this.local.screen) return this.stopScreen();
     const s = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: 30, max: 60 } },
-      audio: true,
+      video: {
+        width: { max: QUALITY[this.quality].screen.w },
+        height: { max: QUALITY[this.quality].screen.h },
+        frameRate: { ideal: QUALITY[this.quality].screen.fps, max: QUALITY[this.quality].screen.fps },
+      },
+      // O som do computador não deve ser "tratado" como voz (senão música e vídeos ficam abafados).
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
     });
     const v = s.getVideoTracks()[0];
     v.contentHint = SCREEN_CONTENT_HINT;
@@ -513,6 +588,42 @@ export class CallSession {
     await this._setLocalTrack("screenAudio", s.getAudioTracks()[0] || null);
     playSound("screenOn");
     await this._push();
+  }
+
+  async toggleNoise() {
+    this.noiseOn = !this.noiseOn;
+    savePref("noise", this.noiseOn ? "on" : "off");
+    const old = this.local.audio;
+    if (old) {
+      // Reabre o microfone com a nova configuração (funciona em todos os navegadores).
+      const wasOn = old.enabled;
+      const s = await this._getMic();
+      const fresh = s.getAudioTracks()[0];
+      fresh.enabled = wasOn;
+      await this._setLocalTrack("audio", fresh);
+      old.stop();
+    }
+    this.onChange();
+  }
+
+  async setQuality(key) {
+    if (!QUALITY[key]) return;
+    this.quality = key;
+    savePref("quality", key);
+    const q = QUALITY[key];
+    // Ajusta o que já está sendo transmitido, sem precisar desligar e ligar de novo.
+    if (this.local.cam) {
+      await this.local.cam
+        .applyConstraints({ width: { ideal: q.cam.w }, height: { ideal: q.cam.h }, frameRate: { ideal: q.cam.fps } })
+        .catch(() => {});
+    }
+    if (this.local.screen) {
+      await this.local.screen
+        .applyConstraints({ width: { max: q.screen.w }, height: { max: q.screen.h }, frameRate: { ideal: q.screen.fps, max: q.screen.fps } })
+        .catch(() => {});
+    }
+    for (const peer of this.peers.values()) await this._tune(peer);
+    this.onChange();
   }
 
   async stopScreen() {
@@ -542,6 +653,7 @@ export class CallSession {
       id: p.id,
       nickname: p.info?.nickname || "…",
       photoURL: p.info?.photoURL || null,
+      uid: p.info?.uid || p.id,
       micOn: !!p.info?.micOn,
       camOn: !!p.info?.camOn,
       screenOn: !!p.info?.screenOn,

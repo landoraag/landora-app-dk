@@ -143,7 +143,9 @@ ipcMain.on("picker:cancel", () => {
   if (pickerWin) pickerWin.close();
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Sempre abre a versão mais nova do site (descarta qualquer cópia antiga guardada).
+  await session.defaultSession.clearCache().catch(() => {});
   setupPermissions();
   createWindow();
   app.on("activate", () => {

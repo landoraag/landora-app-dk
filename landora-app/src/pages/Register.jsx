@@ -28,7 +28,7 @@ export default function Register() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <img src="/logo.png" alt="Landora" className="auth-logo" />
+        <img src="/logomarca.png" alt="Landora" className="auth-logo" />
         <p className="auth-sub">Criar conta — só os sócios devem se registrar aqui.</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
