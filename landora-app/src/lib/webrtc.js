@@ -5,8 +5,9 @@
 // - O Firestore é usado só no começo, para os navegadores "se apresentarem" (sinalização).
 //   Depois que conectou, o Firestore não participa mais do áudio/vídeo.
 // - Topologia "mesh": cada pessoa se conecta com todas as outras. Ótimo para 2 a 4 pessoas.
-// - Anti-ruído do microfone: DeepFilterNet3 (IA) rodando no próprio navegador, antes de a voz
-//   ser enviada. Se o navegador não suportar, cai para o filtro padrão do navegador.
+// - Anti-ruído do microfone (estilo Krisp), em camadas, rodando no próprio navegador antes de a
+//   voz ser enviada: 1) DeepFilterNet3 (IA mais forte), 2) RNNoise (IA leve, arquivos dentro do
+//   site) e só se as duas falharem, 3) o filtro padrão do navegador.
 //
 // Estrutura no Firestore:
 //   calls/{callId}                         -> { name, fixed, createdBy, createdAt }
@@ -25,7 +26,6 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { DeepFilterNet3Core } from "deepfilternet3-noise-filter";
 import { db } from "./firebase";
 import { playSound, unlockSounds } from "./sounds";
 
@@ -41,6 +41,18 @@ const SCREEN_CONTENT_HINT = "detail";
 // Força do anti-ruído (0 a 100). Mais alto corta mais barulho; perto de 100 a voz pode soar
 // um pouco "seca". 80 é um bom equilíbrio.
 const NOISE_LEVEL = 80;
+// Tempo máximo esperando o modelo do DeepFilterNet baixar antes de passar para o RNNoise.
+const DFN_TIMEOUT_MS = 12000;
+
+function withTimeout(promise, ms, reason) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(reason)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
 
 const HEARTBEAT_MS = 15000;
 const STALE_MS = 45000;
@@ -126,7 +138,9 @@ export class CallSession {
     this.noiseOn = loadPref("noise", "on") !== "off"; // anti-ruído do microfone
     this.noiseLoading = false; // true enquanto o modelo de IA do anti-ruído carrega
     this._dfnFailed = false; // se o DeepFilterNet não rodar neste navegador, não tenta de novo
-    this._chains = new Map(); // faixa processada -> { raw, ctx, proc } (para desligar tudo direito)
+    this._rnnFailed = false; // idem para o RNNoise
+    this.noiseEngine = ""; // qual anti-ruído está ativo: "dfn", "rnnoise" ou "browser"
+    this._chains = new Map(); // faixa processada -> { raw, close } (para desligar tudo direito)
     this.micId = loadPref("micId", ""); // microfone escolhido ("" = padrão do sistema)
   }
 
@@ -157,46 +171,82 @@ export class CallSession {
     }
   }
 
-  // Devolve um MediaStream com a faixa de voz já pronta para enviar.
-  // Anti-ruído ligado: microfone -> DeepFilterNet3 -> faixa limpa.
-  async _getMic() {
-    // Anti-ruído desligado: voz crua, sem nenhum filtro de ruído.
-    if (!this.noiseOn) return this._openRawMic(false);
-    // A IA já falhou antes neste navegador: usa o filtro padrão do navegador.
-    if (this._dfnFailed) return this._openRawMic(true);
-
-    const raw = await this._openRawMic(false);
-    let ctx = null;
+  // Camada 1: DeepFilterNet3 (IA mais forte). Baixa o modelo de um servidor externo,
+  // então pode falhar (internet lenta, servidor fora do ar, bloqueio). Devolve { track, close }.
+  async _startDeepFilter(rawTrack) {
+    const { DeepFilterNet3Core } = await import("deepfilternet3-noise-filter");
+    const ctx = new (window.AudioContext || window.webkitAudioContext)({
+      sampleRate: 48000,
+      latencyHint: "interactive",
+    });
     let proc = null;
-    this.noiseLoading = true;
-    this.onChange();
-    try {
-      ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
-      proc = new DeepFilterNet3Core({ sampleRate: 48000, noiseReductionLevel: NOISE_LEVEL });
-      await proc.initialize();
-      const node = await proc.createAudioWorkletNode(ctx);
-      proc.setSuppressionLevel(NOISE_LEVEL);
-
-      const src = ctx.createMediaStreamSource(raw);
-      const dst = ctx.createMediaStreamDestination();
-      src.connect(node).connect(dst);
-      if (ctx.state === "suspended") await ctx.resume();
-
-      const out = dst.stream.getAudioTracks()[0];
-      if (!out) throw new Error("O anti-ruído não gerou faixa de áudio.");
-      this._chains.set(out, { raw, ctx, proc });
-      return dst.stream;
-    } catch (e) {
-      console.warn("DeepFilterNet indisponível, usando o filtro do navegador:", e);
-      this._dfnFailed = true;
-      this.notice = "O anti-ruído avançado não funcionou neste navegador. Usando o filtro padrão.";
+    const close = () => {
       try {
         proc?.destroy();
       } catch {
         /* já encerrado */
       }
-      ctx?.close().catch(() => {});
+      ctx.close().catch(() => {});
+    };
+    try {
+      proc = new DeepFilterNet3Core({ sampleRate: 48000, noiseReductionLevel: NOISE_LEVEL });
+      await withTimeout(proc.initialize(), DFN_TIMEOUT_MS, "o modelo de IA demorou demais para baixar");
+      const node = await proc.createAudioWorkletNode(ctx);
+      proc.setSuppressionLevel(NOISE_LEVEL);
+      const src = ctx.createMediaStreamSource(new MediaStream([rawTrack]));
+      const dst = ctx.createMediaStreamDestination();
+      src.connect(node).connect(dst);
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const track = dst.stream.getAudioTracks()[0];
+      if (!track) throw new Error("o DeepFilterNet não gerou faixa de áudio");
+      return { track, close };
+    } catch (e) {
+      close();
+      throw e;
+    }
+  }
+
+  // Camada 2: RNNoise (IA leve). Os arquivos ficam dentro do próprio site, não depende de
+  // nenhum servidor de fora — funciona em praticamente qualquer navegador moderno.
+  async _startRnnoise(rawTrack) {
+    const { createDenoiser } = await import("./denoise");
+    return createDenoiser(rawTrack);
+  }
+
+  // Devolve um MediaStream com a faixa de voz já pronta para enviar.
+  // Anti-ruído ligado: microfone -> IA (DeepFilterNet3, ou RNNoise se ele falhar) -> faixa limpa.
+  // Só se as duas IAs falharem é que usa o filtro embutido do navegador.
+  async _getMic() {
+    // Anti-ruído desligado: voz crua, sem nenhum filtro de ruído.
+    if (!this.noiseOn) return this._openRawMic(false);
+    // As duas IAs já falharam neste navegador: filtro padrão do navegador.
+    if (this._dfnFailed && this._rnnFailed) return this._openRawMic(true);
+
+    const raw = await this._openRawMic(false);
+    const rawTrack = raw.getAudioTracks()[0];
+    this.noiseLoading = true;
+    this.onChange();
+    try {
+      const engines = [
+        ["dfn", "_dfnFailed", () => this._startDeepFilter(rawTrack)],
+        ["rnnoise", "_rnnFailed", () => this._startRnnoise(rawTrack)],
+      ];
+      for (const [name, failFlag, start] of engines) {
+        if (this[failFlag]) continue;
+        try {
+          const chain = await start();
+          this._chains.set(chain.track, { raw, close: chain.close });
+          this.noiseEngine = name;
+          return new MediaStream([chain.track]);
+        } catch (e) {
+          console.warn(`Anti-ruído "${name}" não funcionou:`, e);
+          this[failFlag] = true;
+        }
+      }
+      // Nenhuma IA funcionou: usa o filtro do navegador.
       raw.getTracks().forEach((t) => t.stop());
+      this.noiseEngine = "browser";
+      this.notice = "O anti-ruído com IA não funcionou neste navegador. Usando o filtro padrão.";
       return this._openRawMic(true);
     } finally {
       this.noiseLoading = false;
@@ -212,12 +262,7 @@ export class CallSession {
     if (!chain) return;
     this._chains.delete(track);
     chain.raw.getTracks().forEach((t) => t.stop());
-    try {
-      chain.proc.destroy();
-    } catch {
-      /* já encerrado */
-    }
-    chain.ctx.close().catch(() => {});
+    chain.close();
   }
 
   // Troca o microfone durante a call.

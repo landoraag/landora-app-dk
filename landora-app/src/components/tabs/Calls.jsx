@@ -358,9 +358,23 @@ function InCall() {
           className={"ctrl-btn " + (session.noiseOn ? "on" : "")}
           onClick={toggleNoise}
           disabled={session.noiseLoading}
-          title="Reduz ruído de fundo com IA (teclado, ventilador, barulho da rua)"
+          title={
+            "Reduz ruído de fundo com IA (teclado, ventilador, barulho da rua)" +
+            (session.noiseOn && session.noiseEngine
+              ? " · Em uso: " +
+                ({ dfn: "DeepFilterNet (máximo)", rnnoise: "RNNoise", browser: "filtro do navegador" }[
+                  session.noiseEngine
+                ] || "")
+              : "")
+          }
         >
-          {session.noiseLoading ? "🎧 Anti-ruído: carregando…" : session.noiseOn ? "🎧 Anti-ruído IA: ligado" : "🎧 Anti-ruído IA: desligado"}
+          {session.noiseLoading
+            ? "🎧 Anti-ruído: carregando…"
+            : !session.noiseOn
+              ? "🎧 Anti-ruído IA: desligado"
+              : session.noiseEngine === "browser"
+                ? "🎧 Anti-ruído: básico"
+                : "🎧 Anti-ruído IA: ligado"}
         </button>
         <label className="ctrl-select" title="Qualidade da câmera e da tela que você transmite">
           <span>Qualidade</span>
