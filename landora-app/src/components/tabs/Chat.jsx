@@ -448,6 +448,8 @@ export default function Chat() {
 
   const [activeChannel, setActiveChannel] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+  // No computador: lista de canais recolhida enquanto a call está aberta (para a call ocupar a tela).
+  const [channelsHidden, setChannelsHidden] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState(null); // string quando criando
   const [newChannelFor, setNewChannelFor] = useState(null); // categoryId quando criando
   const [newChannelName, setNewChannelName] = useState("");
@@ -666,6 +668,11 @@ export default function Chat() {
     if (voiceId && !callsLoading && !calls.find((c) => c.id === voiceId) && call.active?.id !== voiceId) setVoiceId(null);
   }, [voiceId, calls, callsLoading, call.active]);
 
+  // Ao abrir a call, recolhe a lista de canais; ao sair dela, mostra de novo.
+  useEffect(() => {
+    setChannelsHidden(inThisCall);
+  }, [inThisCall]);
+
   // Esconde a barrinha da call enquanto a call está aberta aqui.
   useEffect(() => {
     call.setCallVisible(inThisCall);
@@ -815,7 +822,7 @@ export default function Chat() {
   const canSend = !sending && !recorder.recording && (text.trim() || attachments.length || voice);
 
   return (
-    <div className="chat-shell">
+    <div className={"chat-shell" + (inThisCall ? " in-call" : "") + (channelsHidden ? " channels-hidden" : "")}>
       <aside className={"chat-sidebar" + (showSidebar ? " show" : "")}>
         <div className="chat-sidebar-head">
           <span>Canais</span>
@@ -876,6 +883,16 @@ export default function Chat() {
         onDrop={voiceId ? (e) => e.preventDefault() : onDrop}
       >
         <div className="chat-main-head">
+          <button
+            type="button"
+            className="chat-channels-toggle"
+            onClick={() => setChannelsHidden((v) => !v)}
+            title={channelsHidden ? "Mostrar canais" : "Recolher canais"}
+            aria-label={channelsHidden ? "Mostrar canais" : "Recolher canais"}
+            aria-expanded={!channelsHidden}
+          >
+            <Icon name="chevron" size={16} strokeWidth={2.2} />
+          </button>
           <button className="btn-link chat-back" onClick={() => setShowSidebar(true)}>
             ‹ canais
           </button>

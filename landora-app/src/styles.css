@@ -1186,3 +1186,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue-light)
 .glass-tip-row .dot { width: 8px; height: 8px; border-radius: 50%; }
 .glass-tip-row .name { flex: 1; color: var(--gray-soft); }
 .glass-tip-row b { font-variant-numeric: tabular-nums; }
+
+/* ---------- Call em tela cheia dentro do Chat ---------- */
+/* Enquanto a call está aberta, a área de conteúdo usa toda a largura disponível. */
+.content:has(.chat-shell.in-call) { max-width: none; }
+@media (min-width: 900px) { .content:has(.chat-shell.in-call) { padding: 20px 24px; } }
+.chat-shell.in-call { margin: 0; }
+@media (min-width: 900px) { .chat-shell.in-call { height: calc(100vh - 40px); } }
+
+/* Botão de recolher/mostrar a lista de canais (só no computador). */
+.chat-channels-toggle { display: none; }
+@media (min-width: 700px) {
+  .chat-channels-toggle { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--gray-soft); cursor: pointer; transition: transform .2s, color .12s; }
+  .chat-channels-toggle:hover { color: var(--text); border-color: var(--blue-light); }
+  .chat-shell.channels-hidden .chat-channels-toggle { transform: rotate(180deg); }
+  .chat-shell.channels-hidden .chat-sidebar { display: none; }
+}
+
+/* Câmeras ocupam o espaço: uma pessoa = grande e centralizada; várias = duas por linha. */
+.chat-shell.in-call .call-stage { gap: 14px; }
+.chat-shell.in-call .call-grid:has(> .call-tile:only-child) { grid-template-columns: 1fr; }
+.chat-shell.in-call .call-grid:has(> .call-tile:only-child) .call-tile { width: 100%; max-width: min(100%, calc((100vh - 330px) * 16 / 9)); justify-self: center; }
+.chat-shell.in-call .call-tile { max-height: calc(100vh - 330px); }
+.chat-shell.in-call .call-screen video { max-height: calc(100vh - 300px); }
