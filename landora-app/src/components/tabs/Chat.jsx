@@ -643,34 +643,75 @@ export default function Chat() {
   }, [messages, searchOpen, searchQ]);
 
   /* ----- "fulano está digitando…" (typing/{canal}) ----- */
-  const [typingMap, setTypingMap] = useState({});
+  // Quem digita grava um sinal a cada ~2 s. Quem lê anota QUANDO RECEBEU cada sinal, pelo
+  // próprio relógio, em vez de comparar com o relógio de quem digita: os relógios de celular e
+  // computador costumam estar alguns segundos diferentes, e isso fazia o aviso não aparecer.
+  const TYPING_SHOW_MS = 5000;
+  const [typingSeen, setTypingSeen] = useState({}); // uid -> { name, at (do sinal), receivedAt (meu relógio) }
   const [, setTypingTick] = useState(0);
   useEffect(() => {
     if (!activeChannel || voiceId) return undefined;
-    setTypingMap({});
-    return onSnapshot(doc(db, "typing", activeChannel.id), (snap) => setTypingMap(snap.exists() ? snap.data() : {}), () => {});
-  }, [activeChannel?.id, voiceId]);
+    setTypingSeen({});
+    let first = true;
+    return onSnapshot(
+      doc(db, "typing", activeChannel.id),
+      (snap) => {
+        const data = snap.exists() ? snap.data() : {};
+        const now = Date.now();
+        setTypingSeen((prev) => {
+          const next = {};
+          for (const [uid, v] of Object.entries(data)) {
+            if (uid === user.uid || !v || !v.at) continue;
+            const old = prev[uid];
+            if (old && old.at === v.at) {
+              next[uid] = old; // mesmo sinal de antes: mantém a hora em que chegou
+            } else if (first && Math.abs(now - v.at) > 60000) {
+              continue; // sinal antigo, de alguém que fechou o app no meio da digitação
+            } else {
+              next[uid] = { name: v.name || "Alguém", at: v.at, receivedAt: now };
+            }
+          }
+          first = false;
+          return next;
+        });
+      },
+      () => {}
+    );
+  }, [activeChannel?.id, voiceId, user.uid]);
   useEffect(() => {
-    const i = setInterval(() => setTypingTick((n) => n + 1), 2000);
+    const i = setInterval(() => setTypingTick((n) => n + 1), 1000);
     return () => clearInterval(i);
   }, []);
-  const typingNames = Object.entries(typingMap)
-    .filter(([uid, v]) => uid !== user.uid && v && Date.now() - (v.at || 0) < 6000)
-    .map(([, v]) => v.name);
+  const typingNames = Object.values(typingSeen)
+    .filter((v) => Date.now() - v.receivedAt < TYPING_SHOW_MS)
+    .map((v) => v.name);
+
   const lastTypingWrite = useRef(0);
+  const typingChannel = useRef(null);
   function signalTyping(value) {
     if (!activeChannel) return;
     const now = Date.now();
     if (!value.trim()) return clearTyping();
-    if (now - lastTypingWrite.current < 2500) return;
+    if (now - lastTypingWrite.current < 2000) return;
     lastTypingWrite.current = now;
+    typingChannel.current = activeChannel.id;
     setDoc(doc(db, "typing", activeChannel.id), { [user.uid]: { name: myName || "Alguém", at: now } }, { merge: true }).catch(() => {});
   }
   function clearTyping() {
-    if (!activeChannel || !lastTypingWrite.current) return;
+    const ch = typingChannel.current;
+    if (!ch || !lastTypingWrite.current) return;
     lastTypingWrite.current = 0;
-    updateDoc(doc(db, "typing", activeChannel.id), { [user.uid]: deleteField() }).catch(() => {});
+    typingChannel.current = null;
+    updateDoc(doc(db, "typing", ch), { [user.uid]: deleteField() }).catch(() => {});
   }
+  // Trocou de canal ou saiu do chat: some o "digitando" de quem estava escrevendo.
+  useEffect(
+    () => () => {
+      clearTyping();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeChannel?.id]
+  );
 
   /* ----- autocompletar de @menção ----- */
   const [mentionQuery, setMentionQuery] = useState(null); // texto depois do @ (null = fechado)
