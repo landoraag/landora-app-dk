@@ -19,9 +19,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
       /* Intro ao abrir o app (fica por cima enquanto o app carrega por baixo). */
-      #intro { position: fixed; inset: 0; z-index: 9999; background: radial-gradient(ellipse at 50% 50%, #0d1530 0%, #0b0b0e 62%); display: flex; align-items: center; justify-content: center; transition: opacity .5s ease, transform .5s ease; overflow: hidden; }
+      #intro { position: fixed; inset: 0; z-index: 9999; background: #0a0b10; display: flex; align-items: center; justify-content: center; transition: opacity .5s ease, transform .5s ease; overflow: hidden; }
       #intro.hide { opacity: 0; transform: scale(1.04); pointer-events: none; }
       #intro video { width: 100%; height: 100%; object-fit: contain; background: transparent; opacity: 0; transition: opacity .25s; }
+      /* Celular em pé: o vídeo cresce um pouco (o logo fica maior) e as bordas dele se dissolvem na
+         cor do fundo, que é a mesma do vídeo; assim a tela toda parece uma coisa só. */
+      @media (orientation: portrait) {
+        #intro video { width: 118vw; max-width: none; height: auto; flex: none;
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%); }
+      }
+      /* Brilho azul suave atrás, cobrindo a tela toda (acompanha o brilho do vídeo). */
+      #intro::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 60% 38% at 50% 50%, rgba(0,60,200,0.10), transparent 70%); }
       #intro.playing video { opacity: 1; }
       /* Plano B (celular que não deixa tocar vídeo sozinho): logo animado em CSS. */
       #intro-logo { position: absolute; width: min(100vw, 860px); height: auto; opacity: 0; pointer-events: none;
