@@ -1,10 +1,50 @@
 rules_version = '2';
 
+// Regras do banco de dados do Landora.
+//
+// Proteção por lista de acesso (config/access → { emails: [...] }):
+// - Enquanto a lista NÃO existe, qualquer pessoa logada acessa tudo (como era antes).
+// - Depois que alguém ativa a proteção (Perfil → Acesso ao app), só os e-mails da lista
+//   leem ou alteram qualquer dado. Contas de fora não veem nada.
+// - Ninguém consegue tirar o próprio e-mail da lista (evita se trancar para fora).
+//
+// As funções da Vercel (notificações, lembretes) usam a conta de serviço e não passam por aqui.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Qualquer usuário autenticado (você e seu sócio) pode ler e escrever.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    function signedIn() {
+      return request.auth != null;
+    }
+    function accessPath() {
+      return /databases/$(database)/documents/config/access;
+    }
+    function locked() {
+      return exists(accessPath());
+    }
+    function myEmail() {
+      return request.auth.token.email != null ? request.auth.token.email.lower() : "";
+    }
+    function isMember() {
+      return signedIn() && (!locked() || myEmail() in get(accessPath()).data.emails);
+    }
+
+    // A lista de acesso.
+    match /config/access {
+      allow read: if isMember();
+      // Ativar a proteção: só quando ainda não existe, e quem ativa precisa estar na lista.
+      allow create: if signedIn() && !locked()
+        && request.resource.data.emails is list
+        && myEmail() in request.resource.data.emails;
+      // Alterar: só quem está na lista, sem tirar a si mesmo.
+      allow update: if isMember()
+        && request.resource.data.emails is list
+        && myEmail() in request.resource.data.emails;
+      allow delete: if false;
+    }
+
+    // Todo o resto do app.
+    match /{collection}/{document=**} {
+      allow read, write: if collection != "config" && isMember();
     }
   }
 }

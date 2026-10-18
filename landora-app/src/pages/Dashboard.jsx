@@ -1,19 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { NavLink, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CallProvider } from "../context/CallContext";
 import CallBar from "../components/CallBar";
 import UpdateBanner from "../components/UpdateBanner";
 import NotifyPrompt from "../components/NotifyPrompt";
-import LandingPages from "../components/tabs/LandingPages";
-import Clientes from "../components/tabs/Clientes";
-import Vendas from "../components/tabs/Vendas";
-import Financeiro from "../components/tabs/Financeiro";
-import Relatorios from "../components/tabs/Relatorios";
-import Chat from "../components/tabs/Chat";
-import Perfil from "../components/tabs/Perfil";
-import Leads from "../components/tabs/Leads";
-import Tarefas from "../components/tabs/Tarefas";
+// Cada aba é baixada só quando for aberta (o app abre bem mais rápido, principalmente no 4G).
+const LandingPages = lazy(() => import("../components/tabs/LandingPages"));
+const Clientes = lazy(() => import("../components/tabs/Clientes"));
+const Vendas = lazy(() => import("../components/tabs/Vendas"));
+const Financeiro = lazy(() => import("../components/tabs/Financeiro"));
+const Relatorios = lazy(() => import("../components/tabs/Relatorios"));
+const Chat = lazy(() => import("../components/tabs/Chat"));
+const Perfil = lazy(() => import("../components/tabs/Perfil"));
+const Leads = lazy(() => import("../components/tabs/Leads"));
+const Tarefas = lazy(() => import("../components/tabs/Tarefas"));
 import Avatar from "../components/Avatar";
 import Icon from "../components/Icons";
 
@@ -205,6 +206,13 @@ export default function Dashboard() {
         </nav>
 
         <main className="content">
+          <Suspense
+            fallback={
+              <div className="tab-loading">
+                <div className="spinner" />
+              </div>
+            }
+          >
           <Routes>
             <Route path="/" element={<Navigate to="/landing-pages" replace />} />
             <Route path="/landing-pages" element={<LandingPages />} />
@@ -219,6 +227,7 @@ export default function Dashboard() {
             <Route path="/calls" element={<Navigate to="/chat" replace />} />
             <Route path="/perfil" element={<Perfil />} />
           </Routes>
+          </Suspense>
         </main>
 
         <CallBar />

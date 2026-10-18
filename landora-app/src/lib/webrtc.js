@@ -115,6 +115,31 @@ function newId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+// Servidor TURN da Cloudflare (via função na Vercel). Ponte para quando a rede bloqueia a
+// conexão direta. Se não estiver configurado ou falhar, a call segue só com STUN.
+const TURN_URL = (import.meta.env.VITE_NOTIFY_URL || "https://landora-app-dk-iota.vercel.app/api/notify").replace(/\/notify$/, "/turn");
+let turnCache = { servers: null, exp: 0 };
+async function fetchTurnServers() {
+  if (turnCache.servers && turnCache.exp > Date.now()) return turnCache.servers;
+  try {
+    const { auth } = await import("./firebase");
+    if (!auth.currentUser) return null;
+    const idToken = await auth.currentUser.getIdToken();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(TURN_URL, { method: "POST", headers: { Authorization: `Bearer ${idToken}` }, signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data.iceServers) || !data.iceServers.length) return null;
+    // Renova bem antes de vencer (as credenciais valem 24 h).
+    turnCache = { servers: data.iceServers, exp: Date.now() + Math.max(60, (data.ttl || 3600) - 3600) * 1000 };
+    return data.iceServers;
+  } catch {
+    return null;
+  }
+}
+
 function buildIceServers() {
   const servers = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
   const turn = import.meta.env.VITE_TURN_URL;
@@ -340,12 +365,19 @@ export class CallSession {
   // ---------- entrar / sair ----------
   async join() {
     unlockSounds();
+    // Busca a "ponte" TURN junto com o microfone (sem atrasar a entrada se demorar).
+    const turnPromise = fetchTurnServers().then((servers) => {
+      if (servers) this.turnServers = servers;
+    });
     try {
       const s = await this._getMic();
       this.local.audio = s.getAudioTracks()[0] || null;
     } catch {
       this.notice = "Sem acesso ao microfone — você entrou só para ouvir. Libere o microfone no navegador e clique em 🎤.";
     }
+
+    // Espera o TURN no máximo o que faltar dos 5 s (ele já vinha carregando junto com o microfone).
+    await turnPromise;
 
     await setDoc(this._me(), {
       uid: this.uid,
@@ -510,7 +542,7 @@ export class CallSession {
 
   // ---------- conexões ----------
   _createPeer(id, info) {
-    const pc = new RTCPeerConnection({ iceServers: buildIceServers(), bundlePolicy: "max-bundle" });
+    const pc = new RTCPeerConnection({ iceServers: [...buildIceServers(), ...(this.turnServers || [])], bundlePolicy: "max-bundle" });
     const peer = {
       id,
       info,

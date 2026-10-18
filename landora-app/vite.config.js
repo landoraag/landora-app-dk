@@ -59,6 +59,19 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
   return {
     plugins: [react(), versionFile(), firebaseMessagingWorker(env)],
+    build: {
+      rollupOptions: {
+        output: {
+          // Bibliotecas grandes em pacotes separados: ficam guardadas no aparelho entre atualizações.
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return "react";
+            if (/[\\/]node_modules[\\/](@firebase|firebase)[\\/]/.test(id)) return "firebase";
+            return undefined;
+          },
+        },
+      },
+    },
     define: {
       __APP_VERSION__: JSON.stringify(BUILD_ID),
     },

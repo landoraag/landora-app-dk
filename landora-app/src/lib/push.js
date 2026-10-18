@@ -35,10 +35,12 @@ const TOKEN_KEY = "landora.push.token";
 // Tipos de aviso (a chave é o que vai no Firestore e na função).
 export const PUSH_KINDS = [
   { key: "chat", label: "Mensagens no chat", desc: "Novas mensagens em qualquer canal", icon: "chat" },
+  { key: "mention", label: "Menções (@você)", desc: "Quando alguém te marca no chat", icon: "atSign" },
   { key: "call", label: "Calls", desc: "Quando alguém entra num canal de voz", icon: "volume" },
   { key: "task", label: "Tarefas", desc: "Quando uma tarefa é criada", icon: "tarefas" },
   { key: "lead", label: "Leads", desc: "Quando um lead é cadastrado", icon: "leads" },
   { key: "sale", label: "Vendas", desc: "Quando uma venda é registrada", icon: "vendas" },
+  { key: "reminder", label: "Lembrete de tarefas", desc: "Às 8h: o que vence hoje ou está atrasado", icon: "bell" },
 ];
 
 export function deviceLabel() {
@@ -175,7 +177,7 @@ export async function refreshPushToken({ uid, nickname }) {
 
 // Pede para avisar os OUTROS aparelhos. Nunca trava o app: se falhar, só registra no console.
 // kind: "chat" | "call" | "task" | "lead" | "sale"; url: caminho dentro do app (ex.: "/chat").
-export function notify({ kind, title, body = "", url = "/", tag }) {
+export function notify({ kind, title, body = "", url = "/", tag, to, exclude }) {
   if (!NOTIFY_URL || !auth.currentUser) return;
   auth.currentUser
     .getIdToken()
@@ -183,7 +185,15 @@ export function notify({ kind, title, body = "", url = "/", tag }) {
       fetch(NOTIFY_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ kind, title: String(title).slice(0, 120), body: String(body).slice(0, 240), url, tag }),
+        body: JSON.stringify({
+          kind,
+          title: String(title).slice(0, 120),
+          body: String(body).slice(0, 240),
+          url,
+          tag,
+          ...(to ? { to } : {}),
+          ...(exclude?.length ? { exclude } : {}),
+        }),
         keepalive: true,
       })
     )

@@ -1362,3 +1362,41 @@ html, body, #root { height: auto; min-height: 100%; }
 .auth-screen { min-height: 100vh; min-height: 100dvh; }
 /* sem o efeito "elástico" de puxar a página além do fim */
 html, body { overscroll-behavior-y: none; }
+
+/* ---------- Acesso ao app (Perfil) e tela sem acesso ---------- */
+.notif-icon.warn { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.4); }
+.access-list { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 640px) { .access-list { grid-template-columns: 1fr 1fr; } }
+.access-row { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.access-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.88rem; }
+.access-you { font-size: 0.7rem; font-weight: 700; color: #7fa8ff; background: rgba(0,87,255,0.15); border-radius: 999px; padding: 2px 8px; }
+.access-remove { display: inline-flex; background: none; border: none; color: var(--gray-soft); padding: 4px; border-radius: 6px; cursor: pointer; }
+.access-remove:hover { color: var(--red); }
+.access-add { display: flex; gap: 10px; flex-wrap: wrap; }
+.access-add input { flex: 1; min-width: 200px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); }
+.noaccess-title { font-size: 1.2rem; margin-bottom: 8px; }
+.noaccess-actions { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.tab-loading { display: flex; align-items: center; justify-content: center; min-height: 40vh; }
+
+/* ---------- Chat: não lidas, menções, busca e "digitando…" ---------- */
+.chat-unread { margin-left: auto; flex: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--blue-light); color: white; font-size: 0.68rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.chat-unread.mention { background: #ef4444; }
+.chat-channel:has(.chat-unread) button:first-child { color: var(--text); font-weight: 600; }
+.chat-mention { color: #7fa8ff; background: rgba(0,87,255,0.16); border-radius: 4px; padding: 0 3px; font-weight: 600; }
+.chat-mention.me { color: #fde68a; background: rgba(245,158,11,0.2); }
+.chat-msg.mentions-me .chat-bubble { border-color: rgba(245,158,11,0.6); box-shadow: inset 3px 0 0 #f59e0b; }
+.chat-head-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); color: var(--gray-soft); cursor: pointer; }
+.chat-head-btn:hover, .chat-head-btn.on { color: var(--text); border-color: var(--blue-light); }
+.chat-search { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--gray-soft); }
+.chat-search input { flex: 1; min-width: 0; background: transparent; border: none; color: var(--text); font-size: 0.9rem; padding: 4px 0; }
+.chat-search input:focus { outline: none; }
+.chat-search-count { font-size: 0.74rem; white-space: nowrap; }
+.chat-search button { display: inline-flex; background: none; border: none; color: var(--gray-soft); padding: 4px; cursor: pointer; }
+.chat-typing { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: var(--gray-soft); padding: 0 4px; }
+.chat-typing-dots { display: inline-flex; gap: 3px; }
+.chat-typing-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--gray-soft); animation: chat-typing 1.2s infinite ease-in-out; }
+.chat-typing-dots i:nth-child(2) { animation-delay: .15s; } .chat-typing-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes chat-typing { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+.chat-mention-list { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 6px; box-shadow: 0 10px 26px rgba(0,0,0,0.45); max-width: 320px; }
+.chat-mention-list button { display: flex; align-items: center; gap: 10px; background: none; border: none; color: var(--text); padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left; font-size: 0.88rem; }
+.chat-mention-list button.sel, .chat-mention-list button:hover { background: rgba(0,87,255,0.18); }

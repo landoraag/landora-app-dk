@@ -159,3 +159,27 @@ Configuração (uma vez só):
    e publique de novo (`npm run build` + `firebase deploy --only hosting`).
 5. Em cada aparelho: **Perfil → Notificações → Ativar**. No iPhone (iOS 16.4+), abra antes o
    Landora pelo atalho da tela de início (Compartilhar → Adicionar à Tela de Início).
+
+## Segurança: lista de acesso
+
+Em **Perfil → Acesso ao app** dá para ativar a proteção: só os e-mails da lista veem e alteram
+os dados (regras em `firestore.rules`, publicadas junto com o site pelo `npm run deploy`).
+Enquanto a proteção não é ativada, o app funciona como antes. Ninguém consegue tirar o próprio
+e-mail da lista.
+
+## Calls em qualquer rede (TURN da Cloudflare)
+
+`api/turn.js` gera credenciais temporárias do TURN da Cloudflare. Na Vercel, configure
+`CLOUDFLARE_TURN_KEY_ID` e `CLOUDFLARE_TURN_API_TOKEN` (Cloudflare → Realtime → TURN Server →
+criar chave). Sem elas, as calls continuam funcionando só com conexão direta.
+Teste: `https://SEU-PROJETO.vercel.app/api/turn` deve mostrar `"configurado": true`.
+
+## Lembrete diário de tarefas
+
+`api/reminders.js` roda todo dia por volta das 8h (Vercel Cron, em `vercel.json`) e avisa as
+tarefas que vencem hoje ou estão atrasadas. Opcional: variável `CRON_SECRET` na Vercel.
+
+## Exportar para Excel
+
+Financeiro → **Exportar Excel**: planilha com resumo por ciclo, lançamentos, vendas,
+assinaturas e clientes (gerada no navegador, sem biblioteca extra).

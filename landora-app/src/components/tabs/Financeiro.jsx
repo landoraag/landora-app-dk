@@ -4,6 +4,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { formatBRL, formatDate, getCycleInfo, addDays, todayISO } from "../../lib/format";
+import { downloadXlsx } from "../../lib/xlsx";
 import { C, ChartCard, GlassTooltip, LegendRows, RingGauge, StatCard, axisProps, shortMoney } from "../charts/ChartKit";
 
 // Todos os dias de um ciclo (do início até o dia anterior ao próximo corte).
@@ -36,6 +37,7 @@ export default function Financeiro() {
   const { data: pages } = useCollection("landingPages", "createdAt", "desc");
   const { data: clients } = useCollection("clients", "createdAt", "desc");
   const { data: settingsDocs } = useCollection("settings");
+  const { data: sales } = useCollection("sales", "date", "desc");
 
   const settings = settingsDocs.find((s) => s.id === "finance") || { resetDay: 1 };
   const [resetDayDraft, setResetDayDraft] = useState(settings.resetDay);
@@ -121,6 +123,74 @@ export default function Financeiro() {
   function pageTitle(id) { return pages.find((p) => p.id === id)?.title || "—"; }
   function clientName(id) { return clients.find((c) => c.id === id)?.name || "—"; }
 
+  // Cópia de segurança em Excel: resumo dos ciclos, lançamentos, vendas, assinaturas e clientes.
+  function exportExcel() {
+    const resumo = cycles.map((c) => ({ label: c.label, start: c.start, end: addDays(c.end, -1), ...cycleTotals(c) }));
+    downloadXlsx(`Landora-financeiro-${todayISO()}`, [
+      {
+        name: "Resumo por ciclo",
+        columns: [
+          { header: "Ciclo", key: "label" },
+          { header: "Início", key: "start", type: "date" },
+          { header: "Fim", key: "end", type: "date" },
+          { header: "Entradas manuais", key: "manualIn", type: "money", width: 18 },
+          { header: "Implantações", key: "implant", type: "money", width: 16 },
+          { header: "Assinaturas", key: "assinaturas", type: "money", width: 16 },
+          { header: "Total de entradas", key: "entradasTotal", type: "money", width: 18 },
+          { header: "Saídas", key: "saidas", type: "money", width: 14 },
+          { header: "Saldo", key: "saldo", type: "money", width: 14 },
+        ],
+        rows: resumo,
+      },
+      {
+        name: "Lançamentos",
+        columns: [
+          { header: "Data", key: "date", type: "date" },
+          { header: "Tipo", value: (e) => (e.type === "entrada" ? "Entrada" : "Saída") },
+          { header: "Descrição", value: (e) => e.description || (e.source === "implantacao" ? "Implantação (automático)" : ""), width: 44 },
+          { header: "Origem", value: (e) => (e.source === "implantacao" ? "Venda" : "Manual") },
+          { header: "Valor", key: "value", type: "money", width: 14 },
+        ],
+        rows: [...entries].sort((a, b) => (a.date < b.date ? 1 : -1)),
+      },
+      {
+        name: "Vendas",
+        columns: [
+          { header: "Data", key: "date", type: "date" },
+          { header: "Cliente", value: (v) => clientName(v.clientId), width: 28 },
+          { header: "Landing page", value: (v) => pageTitle(v.landingPageId), width: 32 },
+          { header: "Implantação", key: "implantationValue", type: "money", width: 16 },
+          { header: "Assinatura mensal", key: "subscriptionValue", type: "money", width: 18 },
+          { header: "Vendido por", key: "createdBy", width: 18 },
+        ],
+        rows: sales,
+      },
+      {
+        name: "Assinaturas",
+        columns: [
+          { header: "Cliente", value: (x) => clientName(x.clientId), width: 28 },
+          { header: "Landing page", value: (x) => pageTitle(x.landingPageId), width: 32 },
+          { header: "Valor mensal", key: "value", type: "money", width: 16 },
+          { header: "Desde", key: "startDate", type: "date" },
+          { header: "Situação", value: (x) => (x.active ? "Ativa" : "Desativada") },
+          { header: "Desativada em", key: "deactivatedAt", type: "date", width: 16 },
+        ],
+        rows: subscriptions,
+      },
+      {
+        name: "Clientes",
+        columns: [
+          { header: "Nome", key: "name", width: 28 },
+          { header: "Marca", key: "brandName", width: 24 },
+          { header: "Telefone", key: "phone", width: 18 },
+          { header: "E-mail", key: "email", width: 30 },
+          { header: "Local", key: "location", width: 24 },
+        ],
+        rows: clients,
+      },
+    ]);
+  }
+
   return (
     <div>
       <header className="content-header row">
@@ -128,7 +198,12 @@ export default function Financeiro() {
           <h2>Financeiro</h2>
           <p className="muted">Ciclo mensal com dia de corte customizável.</p>
         </div>
-        <button className="btn btn-gradient" onClick={() => setShowForm(true)}>+ Lançamento</button>
+        <div className="row-actions">
+          <button className="btn btn-ghost" onClick={exportExcel} title="Baixa uma planilha com resumo, lançamentos, vendas, assinaturas e clientes">
+            ⬇ Exportar Excel
+          </button>
+          <button className="btn btn-gradient" onClick={() => setShowForm(true)}>+ Lançamento</button>
+        </div>
       </header>
 
       <div className="inline-form">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
@@ -55,6 +55,40 @@ function previewOf(m) {
   if (m.files?.length) return `📎 ${m.files[0].name}${m.files.length > 1 ? ` +${m.files.length - 1}` : ""}`;
   if (m.audio) return "🎤 Áudio";
   return "Mensagem";
+}
+
+/* ---------- @menções ---------- */
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const msOf = (m) => m.createdAt?.toMillis?.() ?? (m.createdAt?.seconds ? m.createdAt.seconds * 1000 : Date.now());
+
+// Quem foi marcado com @Nome no texto.
+// (O nome precisa terminar ali: "@Kauan" não marca alguém chamado "Ka".)
+function findMentions(text, people) {
+  return people
+    .filter((p) => p.nickname && new RegExp(`@${escapeRe(p.nickname)}(?![\\p{L}\\p{N}_])`, "iu").test(text || ""))
+    .map((p) => p.id);
+}
+
+// Texto da mensagem com as @menções destacadas.
+function MessageText({ text, people, myName }) {
+  const names = people.map((p) => p.nickname).filter(Boolean).sort((a, b) => b.length - a.length);
+  if (!names.length || !text.includes("@")) return text;
+  const re = new RegExp(`@(${names.map(escapeRe).join("|")})(?![\\p{L}\\p{N}_])`, "giu");
+  const out = [];
+  let last = 0;
+  let mt;
+  while ((mt = re.exec(text))) {
+    if (mt.index > last) out.push(text.slice(last, mt.index));
+    const isMe = myName && mt[1].toLowerCase() === myName.toLowerCase();
+    out.push(
+      <span key={mt.index} className={"chat-mention" + (isMe ? " me" : "")}>
+        {mt[0]}
+      </span>
+    );
+    last = mt.index + mt[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
 }
 
 function FileCard({ file }) {
@@ -213,7 +247,7 @@ function ImageViewer({ viewer, onClose, onReply }) {
 }
 
 /* ---------------- Uma mensagem ---------------- */
-function Message({ m, mine, photo, selected, onSelect, onReply, onEdit, onDelete, onPin, onOpenImage, onJump, editing, onSaveEdit, onCancelEdit, setRef }) {
+function Message({ m, mine, photo, people, myName, mentionsMe, selected, onSelect, onReply, onEdit, onDelete, onPin, onOpenImage, onJump, editing, onSaveEdit, onCancelEdit, setRef }) {
   const [draft, setDraft] = useState(m.text || "");
   const imgs = imagesOf(m);
 
@@ -226,7 +260,7 @@ function Message({ m, mine, photo, selected, onSelect, onReply, onEdit, onDelete
   return (
     <div
       ref={setRef}
-      className={"chat-msg" + (mine ? " mine" : "") + (selected ? " selected" : "") + (m.pinned ? " pinned" : "")}
+      className={"chat-msg" + (mine ? " mine" : "") + (selected ? " selected" : "") + (m.pinned ? " pinned" : "") + (mentionsMe ? " mentions-me" : "")}
       onClick={(e) => {
         if (e.target.closest("button, a, img, audio, textarea")) return;
         onSelect();
@@ -305,7 +339,7 @@ function Message({ m, mine, photo, selected, onSelect, onReply, onEdit, onDelete
         ) : (
           m.text && (
             <div className="chat-bubble-text">
-              {m.text}
+              <MessageText text={m.text} people={people} myName={myName} />
               {m.edited && <span className="chat-edited"> (editada)</span>}
             </div>
           )
@@ -446,6 +480,8 @@ export default function Chat() {
   const location = useLocation();
   const navigate = useNavigate();
   const photos = useMemo(() => Object.fromEntries(users.map((u) => [u.id, u.photoURL])), [users]);
+  const people = useMemo(() => users.filter((u) => u.nickname).map((u) => ({ id: u.id, nickname: u.nickname, photoURL: u.photoURL })), [users]);
+  const myName = profile?.nickname || "";
 
   const [activeChannel, setActiveChannel] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
@@ -547,6 +583,122 @@ export default function Chat() {
     [allMessages, activeChannel]
   );
   const pinned = useMemo(() => messages.filter((m) => m.pinned), [messages]);
+
+  /* ----- não lidas: até onde cada pessoa já leu em cada canal (chatReads/{uid}) ----- */
+  const [reads, setReads] = useState(null);
+  useEffect(() => {
+    if (!user) return undefined;
+    return onSnapshot(
+      doc(db, "chatReads", user.uid),
+      (snap) => {
+        if (snap.exists()) setReads(snap.data());
+        else {
+          // Primeira vez: só conta como "não lida" o que chegar daqui pra frente.
+          const first = { __since: Date.now() };
+          setReads(first);
+          setDoc(doc(db, "chatReads", user.uid), first, { merge: true }).catch(() => {});
+        }
+      },
+      () => setReads({ __since: Date.now() })
+    );
+  }, [user]);
+
+  const unread = useMemo(() => {
+    const out = {};
+    if (!reads) return out;
+    for (const m of allMessages) {
+      if (m.senderId === user.uid) continue;
+      const seen = Math.max(reads[m.channelId] || 0, reads.__since || 0);
+      if (msOf(m) <= seen) continue;
+      const o = (out[m.channelId] ||= { count: 0, mention: false });
+      o.count += 1;
+      if (m.mentions?.includes(user.uid)) o.mention = true;
+    }
+    return out;
+  }, [allMessages, reads, user.uid]);
+
+  // Marca o canal aberto como lido (quando a tela está visível).
+  useEffect(() => {
+    if (!activeChannel || voiceId || !reads) return undefined;
+    const mark = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!unread[activeChannel.id] && reads[activeChannel.id]) return;
+      setDoc(doc(db, "chatReads", user.uid), { [activeChannel.id]: Date.now() }, { merge: true }).catch(() => {});
+    };
+    mark();
+    document.addEventListener("visibilitychange", mark);
+    return () => document.removeEventListener("visibilitychange", mark);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChannel?.id, voiceId, messages.length, !!reads]);
+
+  /* ----- busca no canal ----- */
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState("");
+  const shownMessages = useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    if (!searchOpen || !q) return messages;
+    return messages.filter((m) =>
+      [m.text, m.senderNickname, ...(m.files || []).map((f) => f.name)].join(" ").toLowerCase().includes(q)
+    );
+  }, [messages, searchOpen, searchQ]);
+
+  /* ----- "fulano está digitando…" (typing/{canal}) ----- */
+  const [typingMap, setTypingMap] = useState({});
+  const [, setTypingTick] = useState(0);
+  useEffect(() => {
+    if (!activeChannel || voiceId) return undefined;
+    setTypingMap({});
+    return onSnapshot(doc(db, "typing", activeChannel.id), (snap) => setTypingMap(snap.exists() ? snap.data() : {}), () => {});
+  }, [activeChannel?.id, voiceId]);
+  useEffect(() => {
+    const i = setInterval(() => setTypingTick((n) => n + 1), 2000);
+    return () => clearInterval(i);
+  }, []);
+  const typingNames = Object.entries(typingMap)
+    .filter(([uid, v]) => uid !== user.uid && v && Date.now() - (v.at || 0) < 6000)
+    .map(([, v]) => v.name);
+  const lastTypingWrite = useRef(0);
+  function signalTyping(value) {
+    if (!activeChannel) return;
+    const now = Date.now();
+    if (!value.trim()) return clearTyping();
+    if (now - lastTypingWrite.current < 2500) return;
+    lastTypingWrite.current = now;
+    setDoc(doc(db, "typing", activeChannel.id), { [user.uid]: { name: myName || "Alguém", at: now } }, { merge: true }).catch(() => {});
+  }
+  function clearTyping() {
+    if (!activeChannel || !lastTypingWrite.current) return;
+    lastTypingWrite.current = 0;
+    updateDoc(doc(db, "typing", activeChannel.id), { [user.uid]: deleteField() }).catch(() => {});
+  }
+
+  /* ----- autocompletar de @menção ----- */
+  const [mentionQuery, setMentionQuery] = useState(null); // texto depois do @ (null = fechado)
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const mentionOptions = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return people.filter((p) => p.id !== user.uid && p.nickname.toLowerCase().includes(q)).slice(0, 6);
+  }, [mentionQuery, people, user.uid]);
+  function updateMentionQuery(value, caret) {
+    const before = value.slice(0, caret);
+    const mt = before.match(/(^|\s)@([^\s@]{0,30})$/);
+    setMentionQuery(mt ? mt[2] : null);
+    setMentionIndex(0);
+  }
+  function pickMention(p) {
+    const el = inputRef.current;
+    const caret = el ? el.selectionStart : text.length;
+    const before = text.slice(0, caret).replace(/@([^\s@]{0,30})$/, `@${p.nickname} `);
+    const next = before + text.slice(caret);
+    setText(next);
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(before.length, before.length);
+    });
+  }
 
   // Ao abrir um canal vai direto para o fim; mensagem nova chega rolando suave.
   const lastChannel = useRef(null);
@@ -659,6 +811,7 @@ export default function Chat() {
           files.push({ url: up.url, name: a.file.name, size: a.file.size, type: a.file.type || "" });
         }
       }
+      const mentions = findMentions(body, people).filter((id) => id !== user.uid);
       let audio = null;
       if (voice) {
         const up = await uploadFile(voice.file, "landora/chat-audio");
@@ -671,19 +824,35 @@ export default function Chat() {
         ...(files.length ? { files } : {}),
         ...(audio ? { audio } : {}),
         ...(replyTo ? { replyTo: { id: replyTo.id, nickname: replyTo.senderNickname, preview: previewOf(replyTo) } } : {}),
+        ...(mentions.length ? { mentions } : {}),
         senderId: user.uid,
         senderNickname: profile?.nickname || "—",
         createdAt: serverTimestamp(),
       });
+      const preview =
+        body ||
+        (images.length ? `📷 ${images.length > 1 ? `${images.length} imagens` : "Imagem"}` : files.length ? `📎 ${files[0].name}` : audio ? "🎤 Mensagem de voz" : "");
+      // Quem foi @mencionado recebe um aviso próprio; os outros, o aviso normal do canal.
+      if (mentions.length) {
+        notify({
+          kind: "mention",
+          title: `${profile?.nickname || "Alguém"} mencionou você em #${activeChannel.name}`,
+          body: preview,
+          url: `/chat?c=${activeChannel.id}`,
+          tag: `mention-${activeChannel.id}`,
+          to: mentions,
+        });
+      }
       notify({
         kind: "chat",
         title: `${profile?.nickname || "Alguém"} em #${activeChannel.name}`,
-        body:
-          body ||
-          (images.length ? `📷 ${images.length > 1 ? `${images.length} imagens` : "Imagem"}` : files.length ? `📎 ${files[0].name}` : audio ? "🎤 Mensagem de voz" : ""),
+        body: preview,
         url: `/chat?c=${activeChannel.id}`,
         tag: `chat-${activeChannel.id}`,
+        exclude: mentions,
       });
+      clearTyping();
+      setMentionQuery(null);
       attachments.forEach((a) => a.url && URL.revokeObjectURL(a.url));
       setAttachments([]);
       discardVoice();
@@ -845,6 +1014,12 @@ export default function Chat() {
       <button onClick={() => openText(ch)}>
         <Icon name="hash" size={15} />
         <span className="chat-channel-name">{ch.name}</span>
+        {unread[ch.id] && !(activeChannel?.id === ch.id && !voiceId) && (
+          <span className={"chat-unread" + (unread[ch.id].mention ? " mention" : "")} title={`${unread[ch.id].count} não lida(s)`}>
+            {unread[ch.id].mention ? "@" : ""}
+            {unread[ch.id].count > 99 ? "99+" : unread[ch.id].count}
+          </span>
+        )}
       </button>
       <button className="chat-channel-del" onClick={() => deleteChannel(ch)} title="Excluir canal" aria-label={`Excluir #${ch.name}`}>
         <Icon name="close" size={13} />
@@ -978,6 +1153,20 @@ export default function Chat() {
           <span className="chat-main-title">
             {voiceId ? `🔊 ${voiceChannel?.name || call.active?.name || "Canal de voz"}` : activeChannel ? `# ${activeChannel.name}` : "Selecione um canal"}
           </span>
+          {!voiceId && activeChannel && (
+            <button
+              type="button"
+              className={"chat-head-btn" + (searchOpen ? " on" : "")}
+              onClick={() => {
+                setSearchOpen((v) => !v);
+                setSearchQ("");
+              }}
+              title="Buscar mensagens"
+              aria-label="Buscar mensagens"
+            >
+              <Icon name="search" size={16} />
+            </button>
+          )}
           {!voiceId && pinned.length > 0 && (
             <button
               type="button"
@@ -1004,6 +1193,26 @@ export default function Chat() {
           )
         ) : (
         <>
+        {searchOpen && (
+          <div className="chat-search">
+            <Icon name="search" size={15} />
+            <input
+              autoFocus
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && (setSearchOpen(false), setSearchQ(""))}
+              placeholder={`Buscar em #${activeChannel?.name || ""}`}
+            />
+            {searchQ.trim() && (
+              <span className="chat-search-count">
+                {shownMessages.length} {shownMessages.length === 1 ? "resultado" : "resultados"}
+              </span>
+            )}
+            <button type="button" onClick={() => (setSearchOpen(false), setSearchQ(""))} aria-label="Fechar busca">
+              <Icon name="close" size={15} />
+            </button>
+          </div>
+        )}
         {showPinned && (
           <div className="chat-pins">
             <div className="chat-pins-head">
@@ -1022,10 +1231,13 @@ export default function Chat() {
         )}
 
         <div ref={listRef} className="chat-messages" onClick={(e) => e.target === e.currentTarget && setSelectedId(null)}>
-          {messages.map((m) => (
+          {shownMessages.map((m) => (
             <Message
               key={m.id}
               m={m}
+              people={people}
+              myName={myName}
+              mentionsMe={m.mentions?.includes(user.uid)}
               mine={m.senderId === user.uid}
               photo={photos[m.senderId]}
               selected={selectedId === m.id || flashId === m.id}
@@ -1046,12 +1258,45 @@ export default function Chat() {
             />
           ))}
           {activeChannel && messages.length === 0 && <p className="muted empty">Nenhuma mensagem em #{activeChannel.name} ainda.</p>}
+          {searchOpen && searchQ.trim() && messages.length > 0 && shownMessages.length === 0 && (
+            <p className="muted empty">Nada encontrado para “{searchQ.trim()}”.</p>
+          )}
           <div ref={bottomRef} />
         </div>
 
         {activeChannel && (
           <div className="chat-composer">
+            {typingNames.length > 0 && (
+              <div className="chat-typing" aria-live="polite">
+                <span className="chat-typing-dots">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                {typingNames.length === 1 ? `${typingNames[0]} está digitando…` : `${typingNames.join(", ")} estão digitando…`}
+              </div>
+            )}
             {chatError && <p className="auth-error chat-error">{chatError}</p>}
+            {mentionOptions.length > 0 && (
+              <div className="chat-mention-list" role="listbox" aria-label="Mencionar alguém">
+                {mentionOptions.map((p, i) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    role="option"
+                    aria-selected={i === mentionIndex}
+                    className={i === mentionIndex ? "sel" : ""}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pickMention(p);
+                    }}
+                  >
+                    <Avatar src={p.photoURL} name={p.nickname} size={22} />
+                    <span>{p.nickname}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {replyTo && (
               <div className="chat-replying">
@@ -1144,12 +1389,33 @@ export default function Chat() {
                   value={text}
                   onChange={(e) => {
                     setText(e.target.value);
+                    signalTyping(e.target.value);
+                    updateMentionQuery(e.target.value, e.target.selectionStart);
                     // Cresce conforme o texto (até um limite) e volta ao normal depois de enviar.
                     e.target.style.height = "auto";
                     e.target.style.height = Math.min(e.target.scrollHeight, 140) + "px";
                   }}
                   onPaste={onPaste}
+                  onBlur={clearTyping}
                   onKeyDown={(e) => {
+                    // Lista de @menção aberta: setas escolhem, Enter/Tab confirma, Esc fecha.
+                    if (mentionOptions.length) {
+                      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                        const d = e.key === "ArrowDown" ? 1 : -1;
+                        setMentionIndex((i) => (i + d + mentionOptions.length) % mentionOptions.length);
+                        return;
+                      }
+                      if (e.key === "Enter" || e.key === "Tab") {
+                        e.preventDefault();
+                        pickMention(mentionOptions[mentionIndex] || mentionOptions[0]);
+                        return;
+                      }
+                      if (e.key === "Escape") {
+                        setMentionQuery(null);
+                        return;
+                      }
+                    }
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSend();

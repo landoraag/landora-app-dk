@@ -6,6 +6,6 @@
     "install-app": "npm --prefix landora-app install",
     "dev": "npm --prefix landora-app run dev",
     "build": "npm --prefix landora-app run build",
-    "deploy": "npm --prefix landora-app run build && cd landora-app && firebase deploy --only hosting"
+    "deploy": "npm --prefix landora-app run build && cd landora-app && firebase deploy --only hosting,firestore:rules"
   }
 }
