@@ -477,6 +477,12 @@ export default function Chat() {
   const bottomRef = useRef(null);
   const shellRef = useRef(null);
 
+  // A página atrás do chat não rola (no celular aparecia uma segunda barra de rolagem).
+  useEffect(() => {
+    document.documentElement.classList.add("chat-open");
+    return () => document.documentElement.classList.remove("chat-open");
+  }, []);
+
   // Celular: quando o teclado abre, o chat encolhe para a caixa de mensagem ficar logo acima dele
   // (o Safari do iPhone não faz isso sozinho).
   useEffect(() => {

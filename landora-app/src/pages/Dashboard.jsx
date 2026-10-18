@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Route, Routes, Navigate, useNavigate } from "react-router-dom";
+import { NavLink, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CallProvider } from "../context/CallContext";
 import CallBar from "../components/CallBar";
@@ -28,6 +28,11 @@ const TABS = [
   { to: "/chat", label: "Chat", icon: "chat" },
 ];
 
+// Celular: estas ficam no menu de baixo; as outras vão para o menu ☰.
+const MOBILE_BOTTOM = ["/chat", "/financeiro", "/relatorios"];
+const MOBILE_DRAWER = TABS.filter((t) => !MOBILE_BOTTOM.includes(t.to));
+const MOBILE_BOTTOM_TABS = MOBILE_BOTTOM.map((to) => TABS.find((t) => t.to === to));
+
 // lembra se o menu ficou aberto ou fechado
 const COLLAPSE_KEY = "landora:sidebar-collapsed";
 function readCollapsed() {
@@ -39,7 +44,19 @@ const norm = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLow
 export default function Dashboard() {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [drawerOpen, setDrawerOpen] = useState(false); // menu ☰ do celular
+
+  // Fecha o menu ☰ ao trocar de aba; Esc também fecha.
+  useEffect(() => setDrawerOpen(false), [location.pathname]);
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKey = (e) => e.key === "Escape" && setDrawerOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+  const drawerHasActive = MOBILE_DRAWER.some((t) => location.pathname.startsWith(t.to));
   const [query, setQuery] = useState("");
   const searchRef = useRef(null);
   const focusSearchNext = useRef(false);
@@ -139,12 +156,53 @@ export default function Dashboard() {
           </div>
         </aside>
 
-        <main className="content">
-          <div className="mobile-profile-row">
-            <Link to="/perfil" title="Meu perfil">
-              <Avatar src={profile?.photoURL} name={profile?.nickname} size={34} />
-            </Link>
+        {/* ---------- Celular: barra do topo com o menu ☰ ---------- */}
+        <header className="mobile-topbar">
+          <button
+            type="button"
+            className={"topbar-menu" + (drawerHasActive ? " has-active" : "")}
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Abrir menu"
+            aria-expanded={drawerOpen}
+          >
+            <Icon name="menu" size={22} strokeWidth={2} />
+          </button>
+          <img className="topbar-logo" src="/logomarca.png" alt="Landora" />
+          <span className="topbar-page">{TABS.find((t) => location.pathname.startsWith(t.to))?.label || (location.pathname.startsWith("/perfil") ? "Perfil" : "")}</span>
+        </header>
+
+        <div className={"drawer-backdrop" + (drawerOpen ? " open" : "")} onClick={() => setDrawerOpen(false)} aria-hidden="true" />
+        <nav className={"drawer" + (drawerOpen ? " open" : "")} aria-label="Menu" aria-hidden={!drawerOpen}>
+          <div className="drawer-head">
+            <img src="/logomarca.png" alt="Landora" />
+            <button type="button" className="drawer-close" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu">
+              <Icon name="close" size={20} />
+            </button>
           </div>
+          <div className="drawer-section">Menu</div>
+          {MOBILE_DRAWER.map((t) => (
+            <NavLink
+              key={t.to}
+              to={t.to}
+              tabIndex={drawerOpen ? 0 : -1}
+              className={({ isActive }) => "drawer-link" + (isActive ? " active" : "")}
+            >
+              <Icon name={t.icon} size={20} />
+              <span>{t.label}</span>
+            </NavLink>
+          ))}
+          <div className="drawer-foot">
+            <NavLink to="/perfil" tabIndex={drawerOpen ? 0 : -1} className="drawer-user">
+              <Avatar src={profile?.photoURL} name={profile?.nickname} size={34} />
+              <span>{profile?.nickname}</span>
+            </NavLink>
+            <button type="button" className="drawer-logout" onClick={logout} tabIndex={drawerOpen ? 0 : -1}>
+              <Icon name="logout" size={18} /> Sair
+            </button>
+          </div>
+        </nav>
+
+        <main className="content">
           <Routes>
             <Route path="/" element={<Navigate to="/landing-pages" replace />} />
             <Route path="/landing-pages" element={<LandingPages />} />
@@ -166,12 +224,16 @@ export default function Dashboard() {
         <NotifyPrompt />
 
         <nav className="bottom-nav">
-          {TABS.map((t) => (
+          {MOBILE_BOTTOM_TABS.map((t) => (
             <NavLink key={t.to} to={t.to} className={({ isActive }) => "bottom-link" + (isActive ? " active" : "")}>
               <span className="bottom-icon"><Icon name={t.icon} size={22} /></span>
               <span className="bottom-label">{t.label}</span>
             </NavLink>
           ))}
+          <NavLink to="/perfil" className={({ isActive }) => "bottom-link bottom-profile" + (isActive ? " active" : "")}>
+            <span className="bottom-icon"><Avatar src={profile?.photoURL} name={profile?.nickname} size={24} /></span>
+            <span className="bottom-label">Perfil</span>
+          </NavLink>
         </nav>
       </div>
     </CallProvider>

@@ -1291,3 +1291,64 @@ html, body { max-width: 100%; overflow-x: clip; }
 .notif-foot .muted { font-size: 0.78rem; }
 .notif-ok { color: #4ade80; font-size: 0.8rem; }
 .notif-foot .auth-error { font-size: 0.8rem; }
+
+/* ---------- Celular: barra do topo, menu ☰ e menu de baixo com 4 abas ---------- */
+:root { --top-bar-h: 56px; }
+.mobile-topbar, .drawer, .drawer-backdrop { display: none; }
+.mobile-profile-row { display: none !important; }
+@media (max-width: 899px) {
+  .mobile-topbar {
+    display: flex; align-items: center; gap: 12px;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+    height: calc(var(--top-bar-h) + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 14px 0 8px;
+    background: rgba(10,10,10,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-menu { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; background: none; border: none; color: var(--text); cursor: pointer; }
+  .topbar-menu:active { background: rgba(255,255,255,0.08); }
+  /* bolinha azul: a aba aberta está dentro do menu ☰ */
+  .topbar-menu.has-active::after { content: ""; position: absolute; top: 9px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue-light); box-shadow: 0 0 8px var(--blue-light); }
+  .topbar-logo { height: 22px; width: auto; }
+  .topbar-page { margin-left: auto; font-size: 0.85rem; font-weight: 600; color: var(--gray-soft); }
+
+  .drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    display: flex; flex-direction: column; gap: 4px;
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 61; width: min(300px, 84vw);
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: #0f131c; border-right: 1px solid var(--border); box-shadow: 12px 0 40px rgba(0,0,0,0.5);
+    transform: translateX(-102%); transition: transform .22s ease; overflow-y: auto;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 14px; }
+  .drawer-head img { height: 26px; width: auto; }
+  .drawer-close { display: inline-flex; background: none; border: none; color: var(--gray-soft); padding: 8px; border-radius: 10px; cursor: pointer; }
+  .drawer-section { font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray-soft); padding: 8px 10px 6px; }
+  .drawer-link { display: flex; align-items: center; gap: 14px; padding: 13px 12px; border-radius: 12px; color: var(--text); text-decoration: none; font-size: 1rem; font-weight: 500; }
+  .drawer-link svg { color: var(--gray-soft); }
+  .drawer-link:active { background: rgba(255,255,255,0.06); }
+  .drawer-link.active { background: rgba(0,87,255,0.16); color: #7fa8ff; font-weight: 600; }
+  .drawer-link.active svg { color: #7fa8ff; }
+  .drawer-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .drawer-user { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; color: var(--text); text-decoration: none; font-weight: 600; }
+  .drawer-logout { display: flex; align-items: center; gap: 10px; background: none; border: none; color: var(--red); font-size: 0.9rem; padding: 10px; cursor: pointer; text-align: left; }
+
+  /* conteúdo começa abaixo da barra do topo e termina acima do menu de baixo */
+  .content { padding-top: calc(var(--top-bar-h) + env(safe-area-inset-top, 0px) + 16px); padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 24px); }
+
+  /* menu de baixo: 4 abas fixas, sem rolagem */
+  .bottom-nav { overflow: hidden; justify-content: space-around; }
+  .bottom-link { flex: 1 1 0; min-width: 0; }
+  .bottom-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-size: 0.7rem; }
+  .bottom-profile .bottom-icon > * { box-shadow: 0 0 0 2px transparent; border-radius: 50%; }
+  .bottom-profile.active .bottom-icon > * { box-shadow: 0 0 0 2px var(--blue-light); }
+
+  /* chat: começa abaixo da barra do topo; a página atrás não rola */
+  .chat-shell, .chat-shell.in-call { top: calc(var(--top-bar-h) + env(safe-area-inset-top, 0px) + 8px); }
+  html.chat-open, html.chat-open body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+
+  /* avisos flutuantes aparecem abaixo da barra do topo */
+  .notify-prompt, .update-banner { top: calc(var(--top-bar-h) + env(safe-area-inset-top, 0px) + 8px); }
+}
