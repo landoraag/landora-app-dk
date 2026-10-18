@@ -11,6 +11,7 @@ import { shrinkImage } from "../../lib/image";
 import { CAN_RECORD, useRecorder } from "../../lib/useRecorder";
 import { useCall } from "../../context/CallContext";
 import { InCall } from "./Calls";
+import { notify } from "../../lib/push";
 
 // Mensagem no Firestore (chatMessages/{id}):
 //   channelId, text, images: [url], files: [{ url, name, size, type }], audio: { url, duration },
@@ -478,6 +479,31 @@ export default function Chat() {
   const inputRef = useRef(null);
   const msgRefs = useRef(new Map());
 
+  // Veio de uma notificação: /chat?c=<canal de texto> ou /chat?v=<canal de voz>.
+  const linkTarget = useRef(new URLSearchParams(location.search));
+  useEffect(() => {
+    const params = linkTarget.current;
+    const c = params.get("c");
+    const v = params.get("v");
+    if (c && channels.length) {
+      const ch = channels.find((x) => x.id === c);
+      if (ch) {
+        setActiveChannel(ch);
+        setShowSidebar(false);
+      }
+      params.delete("c");
+    }
+    if (v && !callsLoading) {
+      if (calls.find((x) => x.id === v)) {
+        setVoiceId(v);
+        setShowSidebar(false);
+      }
+      params.delete("v");
+    }
+    if ((c || v) && !params.get("c") && !params.get("v") && location.search) navigate(location.pathname, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channels, calls, callsLoading]);
+
   useEffect(() => {
     if (!activeChannel && channels.length > 0) setActiveChannel(channels[0]);
   }, [channels, activeChannel]);
@@ -608,6 +634,15 @@ export default function Chat() {
         senderId: user.uid,
         senderNickname: profile?.nickname || "—",
         createdAt: serverTimestamp(),
+      });
+      notify({
+        kind: "chat",
+        title: `${profile?.nickname || "Alguém"} em #${activeChannel.name}`,
+        body:
+          body ||
+          (images.length ? `📷 ${images.length > 1 ? `${images.length} imagens` : "Imagem"}` : files.length ? `📎 ${files[0].name}` : audio ? "🎤 Mensagem de voz" : ""),
+        url: `/chat?c=${activeChannel.id}`,
+        tag: `chat-${activeChannel.id}`,
       });
       attachments.forEach((a) => a.url && URL.revokeObjectURL(a.url));
       setAttachments([]);

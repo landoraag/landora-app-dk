@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useReducer, useRef, 
 import { CallSession } from "../lib/webrtc";
 import { createMeter, createPlayer, getAudioCtx, unlockAudio } from "../lib/callAudio";
 import { useAuth } from "./AuthContext";
+import { notify } from "../lib/push";
 
 const CallContext = createContext(null);
 
@@ -163,6 +164,13 @@ export function CallProvider({ children }) {
       try {
         await s.join();
         setStatus("live");
+        notify({
+          kind: "call",
+          title: `🔊 ${profile?.nickname || "Alguém"} entrou em ${call.name}`,
+          body: "Toque para abrir a call.",
+          url: `/chat?v=${call.id}`,
+          tag: `call-${call.id}`,
+        });
       } catch (e) {
         console.error(e);
         setError("Não foi possível entrar na call. Tente de novo.");

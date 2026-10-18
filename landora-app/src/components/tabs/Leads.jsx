@@ -4,6 +4,7 @@ import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
 import { uploadImage } from "../../lib/cloudinary";
+import { notify } from "../../lib/push";
 
 const STATUS = ["Novo", "Em contato", "Proposta", "Fechado", "Perdido"];
 const STATUS_CLASS = {
@@ -153,6 +154,13 @@ export default function Leads() {
           createdBy: user.uid,
           createdByNickname: profile?.nickname || "",
           createdAt: serverTimestamp(),
+        });
+        notify({
+          kind: "lead",
+          title: `🎯 Novo lead: ${payload.company || payload.name}`,
+          body: [payload.industry, payload.name, `por ${profile?.nickname || "alguém"}`].filter(Boolean).join(" · "),
+          url: "/leads",
+          tag: "leads",
         });
       }
       setFormOpen(false);

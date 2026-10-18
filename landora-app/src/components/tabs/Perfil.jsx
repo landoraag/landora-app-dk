@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { uploadImage } from "../../lib/cloudinary";
 import Avatar from "../Avatar";
+import NotificationSettings from "../NotificationSettings";
 
 // Recorta o centro da imagem em quadrado e reduz, para a foto ficar leve e sem distorcer.
 async function squareAvatar(file, size = 320) {
@@ -93,6 +94,8 @@ export default function Perfil() {
           {err && <p className="auth-error">{err}</p>}
         </div>
       </div>
+
+      <NotificationSettings />
 
       <button className="btn-link profile-logout" onClick={logout}>
         Sair da conta

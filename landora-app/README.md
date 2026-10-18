@@ -129,3 +129,33 @@ O app de computador abre o site online, então ele já pega as atualizações do
 Só é preciso gerar um instalador novo quando algo dentro da pasta `desktop` mudar:
 GitHub → aba **Actions** → **Gerar app do Windows (.exe)** → **Run workflow**. Ao terminar, baixe o
 `Landora-Setup` na parte de baixo da página da execução.
+
+## Notificações no celular (sem cartão de crédito)
+
+Avisos de mensagens no chat, entrada em calls, tarefas, leads e vendas, mesmo com o app fechado.
+Quem fez a ação não recebe o próprio aviso, e cada pessoa escolhe no **Perfil** o que quer receber.
+
+Peças: **Firebase Cloud Messaging** (entrega, grátis no plano atual) + uma **função gratuita na
+Vercel** (`api/notify.js`, sem bibliotecas extras) que dispara os avisos. Os aparelhos ficam na
+coleção `pushTokens` do Firestore.
+
+Configuração (uma vez só):
+
+1. **Chave VAPID** — Firebase Console → ⚙️ Configurações do projeto → **Cloud Messaging** →
+   "Certificados push da Web" → **Gerar par de chaves**. Copie a chave.
+2. **Conta de serviço** — Configurações do projeto → **Contas de serviço** → **Gerar nova chave
+   privada** (baixa um arquivo .json). Guarde em segredo: ela dá acesso total ao projeto.
+3. **Vercel** — em vercel.com, entre com o GitHub → **Add New → Project** → importe
+   `landora-app-dk` → em **Root Directory** escolha `landora-app` → em **Environment Variables**:
+   - `FIREBASE_SERVICE_ACCOUNT` = todo o conteúdo do arquivo .json do passo 2
+   - `APP_URL` = `https://landora-app-dk.web.app`
+   - (as variáveis `VITE_...` do `.env`, para o site também funcionar na Vercel)
+   → **Deploy**. Anote o endereço (ex.: `https://landora-app-dk.vercel.app`).
+4. **`.env`** (no Codespace, pasta `landora-app`) — acrescente:
+   ```
+   VITE_FIREBASE_VAPID_KEY=chave-do-passo-1
+   VITE_NOTIFY_URL=https://SEU-PROJETO.vercel.app/api/notify
+   ```
+   e publique de novo (`npm run build` + `firebase deploy --only hosting`).
+5. Em cada aparelho: **Perfil → Notificações → Ativar**. No iPhone (iOS 16.4+), abra antes o
+   Landora pelo atalho da tela de início (Compartilhar → Adicionar à Tela de Início).

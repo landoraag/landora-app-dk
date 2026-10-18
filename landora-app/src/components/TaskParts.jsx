@@ -4,6 +4,7 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/format";
 import { EMPTY_TASK, PRIORITIES, TASK_STATUS, isOverdue, priorityOf, statusLabel } from "../lib/tasks";
+import { notify } from "../lib/push";
 
 // Marca/desmarca uma tarefa como feita.
 export async function toggleTaskDone(task) {
@@ -107,6 +108,13 @@ export function TaskFormModal({ task, presetPageId = "", pages = [], onClose }) 
           createdBy: user.uid,
           createdByNickname: profile?.nickname || "",
           createdAt: serverTimestamp(),
+        });
+        notify({
+          kind: "task",
+          title: `✅ Nova tarefa · ${priorityOf(payload.priority).label}`,
+          body: `${payload.title}${payload.pageTitle ? ` (${payload.pageTitle})` : ""} — por ${profile?.nickname || "alguém"}`,
+          url: "/tarefas",
+          tag: "tasks",
         });
       }
       onClose();

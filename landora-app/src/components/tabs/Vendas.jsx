@@ -6,6 +6,7 @@ import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
 import { addDays, formatBRL, formatDate, matchesRange, todayISO } from "../../lib/format";
+import { notify } from "../../lib/push";
 import { C, ChartCard, GlassTooltip, LegendRows, StatCard, axisProps, makeStackShape, shortMoney } from "../charts/ChartKit";
 
 const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -113,6 +114,15 @@ export default function Vendas() {
         subscriptionValue,
         createdBy: profile?.nickname || "—",
         createdAt: serverTimestamp(),
+      });
+      notify({
+        kind: "sale",
+        title: `💰 Nova venda: ${formatBRL(implantationValue + subscriptionValue)}`,
+        body: [clientOf(form.clientId)?.name, pageOf(form.landingPageId)?.title, `por ${profile?.nickname || "alguém"}`]
+          .filter(Boolean)
+          .join(" · "),
+        url: "/vendas",
+        tag: "sales",
       });
 
       if (implantationValue > 0) {

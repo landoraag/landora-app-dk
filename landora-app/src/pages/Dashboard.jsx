@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { CallProvider } from "../context/CallContext";
 import CallBar from "../components/CallBar";
 import UpdateBanner from "../components/UpdateBanner";
+import NotifyPrompt from "../components/NotifyPrompt";
 import LandingPages from "../components/tabs/LandingPages";
 import Clientes from "../components/tabs/Clientes";
 import Vendas from "../components/tabs/Vendas";
@@ -162,6 +163,7 @@ export default function Dashboard() {
 
         <CallBar />
         <UpdateBanner />
+        <NotifyPrompt />
 
         <nav className="bottom-nav">
           {TABS.map((t) => (
