@@ -34,7 +34,12 @@ function useFullscreen(boxRef) {
     if (!pseudo) return undefined;
     const onKey = (e) => e.key === "Escape" && setPseudo(false);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Trava a rolagem da página e esconde as barras do app enquanto ocupa a janela toda.
+    document.documentElement.classList.add("has-pseudo-fs");
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.documentElement.classList.remove("has-pseudo-fs");
+    };
   }, [pseudo]);
 
   const enter = (landscape) => {
@@ -217,7 +222,7 @@ function ScreenTile({ s, onMenu, onStop }) {
   const fs = useFullscreen(boxRef);
   return (
     <div
-      className={"call-screen" + (fs.pseudo ? " pseudo-fs" : "")}
+      className={"call-screen" + (fs.on ? " is-fs" : "") + (fs.pseudo ? " pseudo-fs" : "")}
       ref={boxRef}
       onContextMenu={onMenu}
       onDoubleClick={s.mine ? undefined : () => fs.toggle(true)}
@@ -272,7 +277,7 @@ function CamTile({ nickname, photoURL, camOn, micOn, track, mine, mirror, speaki
   return (
     <div
       ref={boxRef}
-      className={"call-tile" + (speaking ? " speaking" : "") + (fs.pseudo ? " pseudo-fs" : "")}
+      className={"call-tile" + (speaking ? " speaking" : "") + (fs.on ? " is-fs" : "") + (fs.pseudo ? " pseudo-fs" : "")}
       onContextMenu={onMenu}
       onDoubleClick={hasVideo ? () => fs.toggle(false) : undefined}
     >

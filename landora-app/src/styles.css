@@ -1542,3 +1542,28 @@ html, body { overscroll-behavior-y: none; }
 .report-total-card b.negative { color: #fecaca; }
 .report-total-card small { font-size: 0.75rem; color: rgba(255,255,255,0.75); }
 .report-table { background: #0b0f17; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; overflow-x: auto; padding: 4px; }
+
+/* ---------- Tela cheia da transmissão/câmera (correção) ----------
+   As regras de tamanho da call dentro do Chat (limite de altura etc.) eram mais "fortes" que as
+   da tela cheia e deixavam o vídeo pequeno no meio da tela preta. Aqui a tela cheia sempre vence. */
+.call-screen.is-fs, .call-tile.is-fs {
+  width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+  max-width: none !important; max-height: none !important; aspect-ratio: auto !important;
+  margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+  background: #000 !important; display: flex !important; align-items: center; justify-content: center;
+}
+.call-screen.is-fs video, .call-tile.is-fs video {
+  position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+  max-width: none !important; max-height: none !important; object-fit: contain !important; background: #000;
+}
+.call-screen.is-fs .call-fs, .call-tile.is-fs .call-fs {
+  top: calc(12px + env(safe-area-inset-top, 0px)); font-size: 1.15rem; padding: 7px 13px; z-index: 3;
+}
+.call-screen.is-fs .call-tile-name, .call-tile.is-fs .call-tile-name { z-index: 3; }
+.call-screen.is-fs .vol-btn, .call-tile.is-fs .vol-btn { z-index: 3; }
+.pseudo-fs { position: fixed !important; inset: 0 !important; z-index: 9000 !important; }
+html.has-pseudo-fs, html.has-pseudo-fs body { overflow: hidden !important; }
+/* No celular o chat fica numa "camada" própria (abaixo das barras do app); em tela cheia ela sobe
+   para cima de tudo e as barras somem. */
+html.has-pseudo-fs .chat-shell { z-index: 9000 !important; }
+html.has-pseudo-fs .bottom-nav, html.has-pseudo-fs .mobile-topbar, html.has-pseudo-fs .call-bar { display: none !important; }
