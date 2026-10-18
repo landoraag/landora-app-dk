@@ -1,11 +1,28 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
-import { formatBRL, formatDate, formatDateShort, matchesRange, todayISO } from "../../lib/format";
+import { addDays, formatBRL, formatDate, matchesRange, todayISO } from "../../lib/format";
+import { C, ChartCard, GlassTooltip, LegendRows, StatCard, axisProps, makeStackShape, shortMoney } from "../charts/ChartKit";
+
+const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const STACK_KEYS = ["Implantação", "Assinatura"];
+const stackShape = makeStackShape(STACK_KEYS);
+
+// Período do filtro como intervalo de datas (para o gráfico mostrar também os dias sem venda).
+function rangeBounds(range, customStart, customEnd) {
+  const today = todayISO();
+  if (range === "dia") return [today, today];
+  if (range === "semana") return [addDays(today, -7), today];
+  if (range === "mes") return [addDays(today, -30), today];
+  if (range === "ano") return [addDays(today, -365), today];
+  if (range === "custom" && customStart && customEnd) return customStart <= customEnd ? [customStart, customEnd] : [customEnd, customStart];
+  return [addDays(today, -30), today];
+}
 
 const RANGES = [
   { key: "dia", label: "Último dia" },
@@ -36,16 +53,38 @@ export default function Vendas() {
     [sales, range, customStart, customEnd]
   );
 
-  const chartData = useMemo(() => {
-    const map = new Map();
+  // Barras por dia (ou por mês, em períodos longos), separando implantação e assinatura.
+  const { chartData, byMonth } = useMemo(() => {
+    const [from, to] = rangeBounds(range, customStart, customEnd);
+    const days = [];
+    for (let d = from; d <= to && days.length < 400; d = addDays(d, 1)) days.push(d);
+    const monthly = days.length > 62;
+    const buckets = new Map();
+    const keyOf = (d) => (monthly ? d.slice(0, 7) : d);
+    days.forEach((d) => {
+      const k = keyOf(d);
+      if (!buckets.has(k)) buckets.set(k, { key: k, Implantação: 0, Assinatura: 0 });
+    });
     for (const s of filtered) {
-      const total = (s.implantationValue || 0) + (s.subscriptionValue || 0);
-      map.set(s.date, (map.get(s.date) || 0) + total);
+      const b = buckets.get(keyOf(s.date));
+      if (!b) continue;
+      b.Implantação += s.implantationValue || 0;
+      b.Assinatura += s.subscriptionValue || 0;
     }
-    return Array.from(map.entries())
-      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .map(([date, total]) => ({ date: formatDateShort(date), total }));
-  }, [filtered]);
+    const data = [...buckets.values()].map((b) => ({
+      ...b,
+      label: monthly ? MONTHS[Number(b.key.slice(5, 7)) - 1] : String(Number(b.key.slice(8, 10))),
+      total: b.Implantação + b.Assinatura,
+    }));
+    return { chartData: data, byMonth: monthly };
+  }, [filtered, range, customStart, customEnd]);
+
+  const best = chartData.reduce((m, d) => (d.total > (m?.total || 0) ? d : m), null);
+  const bestLabel = best
+    ? byMonth
+      ? `${MONTHS_FULL[Number(best.key.slice(5, 7)) - 1]} de ${best.key.slice(0, 4)}`
+      : `Dia ${formatDate(best.key)}`
+    : "Sem vendas no período";
 
   const totals = filtered.reduce(
     (acc, s) => ({
@@ -138,32 +177,43 @@ export default function Vendas() {
         )}
       </div>
 
-      <div className="stat-row">
-        <div className="stat"><span className="stat-label">Total no período</span><span className="stat-value mono">{formatBRL(totals.total)}</span></div>
-        <div className="stat"><span className="stat-label">Implantações</span><span className="stat-value mono">{formatBRL(totals.implantation)}</span></div>
-        <div className="stat"><span className="stat-label">Assinaturas</span><span className="stat-value mono">{formatBRL(totals.subscription)}</span></div>
+      <div className="kpi-row">
+        <StatCard label="Total no período" value={formatBRL(totals.total)} accent={C.b} tone="tone-b" sub={`${filtered.length} ${filtered.length === 1 ? "venda" : "vendas"}`} />
+        <StatCard label={byMonth ? "Melhor mês" : "Melhor dia"} value={formatBRL(best?.total || 0)} sub={bestLabel} />
+        <StatCard label="Implantações" value={formatBRL(totals.implantation)} accent={C.a} />
+        <StatCard label="Assinaturas" value={formatBRL(totals.subscription)} accent={C.b} />
       </div>
 
-      <div className="chart-card">
-        <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={chartData}>
-            <defs>
-              <linearGradient id="salesGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#1E3A8A" />
-                <stop offset="100%" stopColor="#0057FF" />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#1F2937" strokeDasharray="3 3" />
-            <XAxis dataKey="date" stroke="#8b93a3" fontSize={12} />
-            <YAxis stroke="#8b93a3" fontSize={12} tickFormatter={(v) => `R$${v}`} width={70} />
-            <Tooltip
-              contentStyle={{ background: "#111827", border: "1px solid #1F2937", borderRadius: 8, color: "#fff" }}
-              formatter={(v) => formatBRL(v)}
-            />
-            <Line type="monotone" dataKey="total" stroke="url(#salesGradient)" strokeWidth={3} dot={{ r: 3, fill: "#0057FF" }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartCard title={byMonth ? "Vendas por mês" : "Vendas por dia"}>
+        <div className="chart-box">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={chartData} barCategoryGap="22%" margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
+              <CartesianGrid stroke={C.grid} vertical={false} />
+              <XAxis dataKey="label" {...axisProps} interval="preserveStartEnd" minTickGap={8} />
+              <YAxis {...axisProps} tickFormatter={shortMoney} width={44} />
+              <Tooltip
+                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                content={
+                  <GlassTooltip
+                    labelFormatter={(l, p) => {
+                      const k = p?.[0]?.payload?.key || "";
+                      return byMonth ? `${MONTHS_FULL[Number(k.slice(5, 7)) - 1]} de ${k.slice(0, 4)}` : formatDate(k);
+                    }}
+                  />
+                }
+              />
+              <Bar dataKey="Implantação" stackId="v" fill={C.a} shape={stackShape} maxBarSize={34} />
+              <Bar dataKey="Assinatura" stackId="v" fill={C.b} shape={stackShape} maxBarSize={34} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <LegendRows
+          items={[
+            { name: "Implantação", color: C.a, value: totals.implantation },
+            { name: "Assinatura", color: C.b, value: totals.subscription },
+          ]}
+        />
+      </ChartCard>
 
       <h3 className="section-title">Histórico de vendas</h3>
       <table className="ledger-table">

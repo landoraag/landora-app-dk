@@ -31,8 +31,9 @@ export async function uploadImage(file, folder = "landora/landing-pages") {
   return { url: data.secure_url, publicId: data.public_id };
 }
 
-// Envia qualquer arquivo (áudio, por exemplo). O Cloudinary descobre o tipo sozinho ("auto").
-export async function uploadFile(file, folder = "landora/chat") {
+// Envia qualquer arquivo. resourceType: "auto" (o Cloudinary descobre: áudio, por exemplo)
+// ou "raw" (documentos e compactados: PDF, Word, Excel, ZIP… guardados exatamente como são).
+export async function uploadFile(file, folder = "landora/chat", resourceType = "auto") {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error(
       "Cloudinary não configurado: preencha VITE_CLOUDINARY_CLOUD_NAME e VITE_CLOUDINARY_UPLOAD_PRESET no .env"
@@ -42,7 +43,7 @@ export async function uploadFile(file, folder = "landora/chat") {
   formData.append("file", file);
   formData.append("upload_preset", UPLOAD_PRESET);
   formData.append("folder", folder);
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`, {
     method: "POST",
     body: formData,
   });
@@ -56,5 +57,7 @@ export async function uploadFile(file, folder = "landora/chat") {
 
 // Link que faz o navegador BAIXAR o arquivo do Cloudinary (em vez de só abrir).
 export function downloadUrl(url) {
-  return url && url.includes("/upload/") ? url.replace("/upload/", "/upload/fl_attachment/") : url;
+  // Arquivos "raw" (documentos) não aceitam esse ajuste: o navegador já baixa ou abre direto.
+  if (!url || url.includes("/raw/upload/")) return url;
+  return url.includes("/upload/") ? url.replace("/upload/", "/upload/fl_attachment/") : url;
 }

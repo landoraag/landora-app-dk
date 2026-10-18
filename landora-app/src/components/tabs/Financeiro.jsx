@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDoc, collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { formatBRL, formatDate, getCycleInfo, addDays, todayISO } from "../../lib/format";
+import { C, ChartCard, GlassTooltip, LegendRows, RingGauge, StatCard, axisProps, shortMoney } from "../charts/ChartKit";
+
+// Todos os dias de um ciclo (do início até o dia anterior ao próximo corte).
+function daysOf(cycle) {
+  const out = [];
+  for (let d = cycle.start; d < cycle.end; d = addDays(d, 1)) out.push(d);
+  return out;
+}
 
 function getCyclesRange(resetDay, count = 6) {
   const cycles = [];
@@ -38,6 +46,7 @@ export default function Financeiro() {
   const activeCycle = cycles.find((c) => c.key === selectedCycleKey) || cycles[cycles.length - 1];
 
   const [showForm, setShowForm] = useState(false);
+  const [daily, setDaily] = useState(false); // gráfico do ciclo: acumulado (false) ou por dia (true)
   const [form, setForm] = useState({ type: "entrada", value: "", date: todayISO(), description: "" });
 
   async function saveResetDay() {
@@ -77,8 +86,36 @@ export default function Financeiro() {
     const t = cycleTotals(c);
     return { label: c.label, Entradas: Math.round(t.entradasTotal), Saídas: Math.round(t.saidas) };
   });
+  const sixTotals = chartData.reduce((acc, d) => ({ in: acc.in + d.Entradas, out: acc.out + d.Saídas }), { in: 0, out: 0 });
 
   const current = cycleTotals(activeCycle);
+
+  // Dia a dia do ciclo escolhido. Assinaturas contam no primeiro dia do ciclo.
+  // Dias que ainda não chegaram ficam vazios, para a linha parar em "hoje".
+  const dayData = useMemo(() => {
+    const today = todayISO();
+    const inCycle = entries.filter((e) => e.date >= activeCycle.start && e.date < activeCycle.end);
+    let accIn = 0;
+    let accOut = 0;
+    return daysOf(activeCycle).map((d, i) => {
+      const dayIn =
+        inCycle.filter((e) => e.date === d && e.type === "entrada").reduce((s, e) => s + e.value, 0) +
+        (i === 0 ? current.assinaturas : 0);
+      const dayOut = inCycle.filter((e) => e.date === d && e.type === "saida").reduce((s, e) => s + e.value, 0);
+      accIn += dayIn;
+      accOut += dayOut;
+      const future = d > today;
+      return {
+        date: d,
+        day: Number(d.slice(8, 10)),
+        Entradas: future ? null : daily ? dayIn : accIn,
+        Saídas: future ? null : daily ? dayOut : accOut,
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, activeCycle.key, current.assinaturas, daily]);
+
+  const spentPct = current.entradasTotal > 0 ? (current.saidas / current.entradasTotal) * 100 : 0;
   const activeSubs = subscriptions.filter((s) => s.active);
 
   function pageTitle(id) { return pages.find((p) => p.id === id)?.title || "—"; }
@@ -105,30 +142,6 @@ export default function Financeiro() {
         <span className="muted">Ciclo atual: {activeCycle.label} ({formatDate(activeCycle.start)} até o dia anterior a {formatDate(activeCycle.end)})</span>
       </div>
 
-      <div className="chart-card">
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={chartData}>
-            <defs>
-              <linearGradient id="inGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#0057FF" />
-                <stop offset="100%" stopColor="#1E3A8A" />
-              </linearGradient>
-              <linearGradient id="outGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#6B7280" />
-                <stop offset="100%" stopColor="#374151" />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#1F2937" strokeDasharray="3 3" />
-            <XAxis dataKey="label" stroke="#8b93a3" fontSize={12} />
-            <YAxis stroke="#8b93a3" fontSize={12} tickFormatter={(v) => `R$${v}`} width={70} />
-            <Tooltip contentStyle={{ background: "#111827", border: "1px solid #1F2937", borderRadius: 8, color: "#fff" }} formatter={(v) => formatBRL(v)} />
-            <Legend />
-            <Bar dataKey="Entradas" fill="url(#inGradient)" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="Saídas" fill="url(#outGradient)" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
       <div className="filter-row">
         {cycles.map((c) => (
           <button key={c.key} className={"period-tab" + (c.key === activeCycle.key ? " active" : "")} onClick={() => setSelectedCycleKey(c.key)}>
@@ -137,16 +150,107 @@ export default function Financeiro() {
         ))}
       </div>
 
-      <div className="stat-row">
-        <div className="stat"><span className="stat-label">Entradas manuais</span><span className="stat-value mono">{formatBRL(current.manualIn)}</span></div>
-        <div className="stat"><span className="stat-label">Implantações</span><span className="stat-value mono">{formatBRL(current.implant)}</span></div>
-        <div className="stat"><span className="stat-label">Assinaturas recorrentes</span><span className="stat-value mono">{formatBRL(current.assinaturas)}</span></div>
-        <div className="stat"><span className="stat-label">Saídas</span><span className="stat-value mono negative">{formatBRL(current.saidas)}</span></div>
+      <div className="kpi-row">
+        <StatCard label="Entrou" value={formatBRL(current.entradasTotal)} accent={C.a} tone="tone-a" sub={`Implantações ${formatBRL(current.implant)}`} />
+        <StatCard label="Saiu" value={formatBRL(current.saidas)} accent={C.b} tone="tone-b" />
+        <StatCard label="Assinaturas" value={formatBRL(current.assinaturas)} accent={C.brand} sub={`Entradas manuais ${formatBRL(current.manualIn)}`} />
+        <StatCard
+          label={`Saldo do ciclo ${activeCycle.label}`}
+          value={formatBRL(current.saldo)}
+          tone={current.saldo >= 0 ? "" : "negative"}
+        />
       </div>
-      <div className="balance-banner">
-        <span>Saldo do ciclo {activeCycle.label}</span>
-        <strong className={"mono " + (current.saldo >= 0 ? "positive" : "negative")}>{formatBRL(current.saldo)}</strong>
+
+      <div className="dash-grid">
+        <ChartCard
+          title={daily ? "Movimento por dia" : "Acumulado do ciclo"}
+          subtitle={
+            <>
+              <span className="legend-inline"><i style={{ background: C.a }} /> Entrada</span>
+              <span className="legend-inline"><i style={{ background: C.b }} /> Saída</span>
+            </>
+          }
+          action={
+            <button type="button" className="pill-btn" onClick={() => setDaily((v) => !v)}>
+              {daily ? "Acumulado ›" : "Por dia ›"}
+            </button>
+          }
+        >
+          <div className="chart-box">
+            <ResponsiveContainer width="100%" height={250}>
+              {daily ? (
+                <BarChart data={dayData} barGap={2} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
+                  <CartesianGrid stroke={C.grid} vertical={false} />
+                  <XAxis dataKey="day" {...axisProps} interval="preserveStartEnd" minTickGap={6} />
+                  <YAxis {...axisProps} tickFormatter={shortMoney} width={44} />
+                  <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<GlassTooltip labelFormatter={(l, p) => formatDate(p?.[0]?.payload?.date)} />} />
+                  <Bar dataKey="Entradas" fill={C.a} radius={[4, 4, 0, 0]} maxBarSize={14} />
+                  <Bar dataKey="Saídas" fill={C.b} radius={[4, 4, 0, 0]} maxBarSize={14} />
+                </BarChart>
+              ) : (
+                <AreaChart data={dayData} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="fin-in" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.a} stopOpacity={0.45} />
+                      <stop offset="100%" stopColor={C.a} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="fin-out" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.b} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={C.b} stopOpacity={0} />
+                    </linearGradient>
+                    <filter id="fin-glow" x="-10%" y="-30%" width="120%" height="160%">
+                      <feGaussianBlur stdDeviation="3" result="b" />
+                      <feMerge>
+                        <feMergeNode in="b" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <CartesianGrid stroke={C.grid} vertical={false} />
+                  <XAxis dataKey="day" {...axisProps} interval="preserveStartEnd" minTickGap={6} />
+                  <YAxis {...axisProps} tickFormatter={shortMoney} width={44} />
+                  <Tooltip
+                    cursor={{ stroke: "rgba(255,255,255,0.25)", strokeDasharray: "3 3" }}
+                    content={<GlassTooltip labelFormatter={(l, p) => `Até ${formatDate(p?.[0]?.payload?.date)}`} />}
+                  />
+                  <Area type="monotone" dataKey="Entradas" stroke={C.a} strokeWidth={2} fill="url(#fin-in)" filter="url(#fin-glow)" connectNulls={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#0b0f17" }} />
+                  <Area type="monotone" dataKey="Saídas" stroke={C.b} strokeWidth={2} fill="url(#fin-out)" filter="url(#fin-glow)" connectNulls={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#0b0f17" }} />
+                </AreaChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        <ChartCard className="ring-card">
+          <RingGauge pct={spentPct} label={"da entrada\njá saiu"} />
+          <p className="ring-note">
+            {current.entradasTotal > 0
+              ? `${formatBRL(current.saidas)} de ${formatBRL(current.entradasTotal)}`
+              : "Sem entradas neste ciclo ainda."}
+          </p>
+        </ChartCard>
       </div>
+
+      <ChartCard title="Últimos 6 ciclos" subtitle="Entradas e saídas de cada ciclo">
+        <div className="chart-box">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={chartData} barGap={2} barCategoryGap="28%" margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
+              <CartesianGrid stroke={C.grid} vertical={false} />
+              <XAxis dataKey="label" {...axisProps} />
+              <YAxis {...axisProps} tickFormatter={shortMoney} width={44} />
+              <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<GlassTooltip />} />
+              <Bar dataKey="Entradas" fill={C.a} radius={[5, 5, 0, 0]} maxBarSize={30} />
+              <Bar dataKey="Saídas" fill={C.b} radius={[5, 5, 0, 0]} maxBarSize={30} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <LegendRows
+          items={[
+            { name: "Entradas", color: C.a, value: sixTotals.in },
+            { name: "Saídas", color: C.b, value: sixTotals.out },
+          ]}
+        />
+      </ChartCard>
 
       <h3 className="section-title">Assinaturas recorrentes ativas</h3>
       <table className="ledger-table">

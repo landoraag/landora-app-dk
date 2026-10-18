@@ -10,7 +10,6 @@ import Vendas from "../components/tabs/Vendas";
 import Financeiro from "../components/tabs/Financeiro";
 import Relatorios from "../components/tabs/Relatorios";
 import Chat from "../components/tabs/Chat";
-import Calls from "../components/tabs/Calls";
 import Perfil from "../components/tabs/Perfil";
 import Leads from "../components/tabs/Leads";
 import Tarefas from "../components/tabs/Tarefas";
@@ -26,7 +25,6 @@ const TABS = [
   { to: "/financeiro", label: "Financeiro", icon: "financeiro" },
   { to: "/relatorios", label: "Relatórios", icon: "relatorios" },
   { to: "/chat", label: "Chat", icon: "chat" },
-  { to: "/calls", label: "Calls", icon: "calls" },
 ];
 
 // lembra se o menu ficou aberto ou fechado
@@ -156,7 +154,8 @@ export default function Dashboard() {
             <Route path="/financeiro" element={<Financeiro />} />
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/chat" element={<Chat />} />
-            <Route path="/calls" element={<Calls />} />
+            {/* As calls agora são canais de voz dentro do Chat. */}
+            <Route path="/calls" element={<Navigate to="/chat" replace />} />
             <Route path="/perfil" element={<Perfil />} />
           </Routes>
         </main>

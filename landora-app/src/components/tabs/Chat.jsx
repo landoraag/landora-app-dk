@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { useLocation, useNavigate } from "react-router-dom";
+import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
@@ -8,22 +9,65 @@ import Icon from "../Icons";
 import { downloadUrl, uploadFile, uploadImage } from "../../lib/cloudinary";
 import { shrinkImage } from "../../lib/image";
 import { CAN_RECORD, useRecorder } from "../../lib/useRecorder";
+import { useCall } from "../../context/CallContext";
+import { InCall } from "./Calls";
 
 // Mensagem no Firestore (chatMessages/{id}):
-//   channelId, text, images: [url], audio: { url, duration },
+//   channelId, text, images: [url], files: [{ url, name, size, type }], audio: { url, duration },
 //   replyTo: { id, nickname, preview }, edited, editedAt, pinned, pinnedAt, pinnedBy,
 //   senderId, senderNickname, createdAt
 // Mensagens antigas usam imageUrl (uma imagem só) — continuam aparecendo normalmente.
 
-const MAX_IMAGES = 6;
+const MAX_ATTACH = 6; // anexos por mensagem (imagens + arquivos)
+const MAX_IMAGE_MB = 20;
+const MAX_FILE_MB = 10; // limite do plano gratuito do Cloudinary para documentos
+// Tipos de arquivo aceitos além de imagens.
+const DOC_ACCEPT =
+  ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.odt,.ods,.odp,.rtf";
+const DOC_EXTS = DOC_ACCEPT.split(",").map((e) => e.slice(1));
 
 const imagesOf = (m) => (m.images?.length ? m.images : m.imageUrl ? [m.imageUrl] : []);
+const extOf = (name = "") => (name.includes(".") ? name.split(".").pop().toLowerCase() : "");
+const isImageFile = (f) => f.type.startsWith("image/") && !/svg/.test(f.type);
+const isDocFile = (f) => DOC_EXTS.includes(extOf(f.name));
+
+function fileSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+}
+
+// Cor e rótulo do cartão de cada tipo de arquivo.
+function fileKind(name) {
+  const e = extOf(name);
+  if (e === "pdf") return { label: "PDF", cls: "fk-pdf" };
+  if (["doc", "docx", "odt", "rtf", "txt"].includes(e)) return { label: e.toUpperCase(), cls: "fk-doc" };
+  if (["xls", "xlsx", "ods", "csv"].includes(e)) return { label: e.toUpperCase(), cls: "fk-xls" };
+  if (["ppt", "pptx", "odp"].includes(e)) return { label: e.toUpperCase(), cls: "fk-ppt" };
+  if (["zip", "rar", "7z"].includes(e)) return { label: e.toUpperCase(), cls: "fk-zip" };
+  return { label: (e || "ARQ").toUpperCase(), cls: "fk-doc" };
+}
 
 function previewOf(m) {
   if (m.text) return m.text.length > 90 ? m.text.slice(0, 90) + "…" : m.text;
   if (imagesOf(m).length) return "📷 Imagem";
+  if (m.files?.length) return `📎 ${m.files[0].name}${m.files.length > 1 ? ` +${m.files.length - 1}` : ""}`;
   if (m.audio) return "🎤 Áudio";
   return "Mensagem";
+}
+
+function FileCard({ file }) {
+  const k = fileKind(file.name);
+  return (
+    <a className="chat-file" href={file.url} target="_blank" rel="noreferrer" download={file.name} title={`Baixar ${file.name}`}>
+      <span className={"chat-file-icon " + k.cls}>{k.label}</span>
+      <span className="chat-file-info">
+        <b>{file.name}</b>
+        <span>{fileSize(file.size)}</span>
+      </span>
+      <Icon name="download" size={17} />
+    </a>
+  );
 }
 
 const mmss = (s) => {
@@ -217,6 +261,14 @@ function Message({ m, mine, photo, selected, onSelect, onReply, onEdit, onDelete
           </div>
         )}
 
+        {m.files?.length > 0 && (
+          <div className="chat-files">
+            {m.files.map((f, i) => (
+              <FileCard key={f.url + i} file={f} />
+            ))}
+          </div>
+        )}
+
         {m.audio?.url && (
           <div className="chat-audio">
             <Icon name="mic" size={16} />
@@ -294,13 +346,104 @@ function Message({ m, mine, photo, selected, onSelect, onReply, onEdit, onDelete
   );
 }
 
+/* ---------------- Canais de voz (as calls) ---------------- */
+// Canal de voz = uma call (coleção "calls"). Fixo fica salvo; temporário some quando todos saem.
+
+// Quem está agora num canal de voz (presença das calls, atualizada a cada 15 s).
+function useVoiceMembers(callId) {
+  const [members, setMembers] = useState([]);
+  useEffect(() => {
+    if (!callId) return undefined;
+    return onSnapshot(
+      collection(db, "calls", callId, "participants"),
+      (snap) => {
+        const now = Date.now();
+        const byUid = new Map();
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          if (Math.abs(now - (data.lastSeen || 0)) > 90000) return; // saiu sem avisar
+          const cur = byUid.get(data.uid);
+          if (!cur || (data.joinedAt || 0) > (cur.joinedAt || 0)) byUid.set(data.uid, { id: d.id, ...data });
+        });
+        setMembers([...byUid.values()].sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0)));
+      },
+      () => setMembers([])
+    );
+  }, [callId]);
+  return members;
+}
+
+function VoiceChannel({ c, selected, live, speakingIds, mySessionId, onOpen, onDelete }) {
+  const members = useVoiceMembers(c.id);
+  return (
+    <div className={"chat-voice" + (selected ? " active" : "") + (live ? " live" : "")}>
+      <div className="chat-channel">
+        <button onClick={() => onOpen(c)} title={live ? "Abrir a call" : "Entrar no canal de voz"}>
+          <Icon name="volume" size={15} />
+          <span className="chat-channel-name">{c.name}</span>
+          {!c.fixed && <span className="chat-voice-tag">temp.</span>}
+          {members.length > 0 && <span className="chat-voice-count">{members.length}</span>}
+        </button>
+        <button className="chat-channel-del" onClick={() => onDelete(c)} title="Excluir canal de voz" aria-label={`Excluir ${c.name}`}>
+          <Icon name="close" size={13} />
+        </button>
+      </div>
+      {members.length > 0 && (
+        <div className="chat-voice-members">
+          {members.map((m) => {
+            const talking = live && speakingIds.has(m.id === mySessionId ? "me" : m.id);
+            return (
+              <div key={m.id} className={"chat-voice-member" + (talking ? " speaking" : "")}>
+                <Avatar src={m.photoURL} name={m.nickname} size={20} />
+                <span>{m.nickname}</span>
+                <span className="chat-voice-icons">
+                  {(m.screenOn || m.screen2On) && <span title="Transmitindo a tela">🖥️</span>}
+                  {m.camOn && <span title="Câmera ligada">🎥</span>}
+                  {!m.micOn && <span title="Microfone desligado">🔇</span>}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Painel de um canal de voz em que você ainda não entrou.
+function VoiceLobby({ c, onJoin, error }) {
+  const members = useVoiceMembers(c.id);
+  return (
+    <div className="voice-lobby">
+      <div className="voice-lobby-icon">
+        <Icon name="volume" size={34} />
+      </div>
+      <h3>{c.name}</h3>
+      <p className="muted">
+        {members.length === 0
+          ? "Ninguém aqui ainda."
+          : `${members.length} ${members.length === 1 ? "pessoa" : "pessoas"} na call: ${members.map((m) => m.nickname).join(", ")}`}
+      </p>
+      <p className="hint">{c.fixed ? "Canal fixo — fica salvo na lista." : "Canal temporário — some quando todos saem."}</p>
+      {error && <p className="auth-error">{error}</p>}
+      <button className="btn btn-gradient" onClick={() => onJoin(c)}>
+        Entrar na call
+      </button>
+    </div>
+  );
+}
+
 /* ---------------- Aba Chat ---------------- */
 export default function Chat() {
   const { data: categories } = useCollection("channelCategories", "createdAt", "asc");
   const { data: channels } = useCollection("channels", "createdAt", "asc");
   const { data: allMessages } = useCollection("chatMessages", "createdAt", "asc");
   const { data: users } = useCollection("users", "createdAt", "asc");
+  const { data: calls, loading: callsLoading } = useCollection("calls", "createdAt", "asc");
   const { user, profile } = useAuth();
+  const call = useCall();
+  const location = useLocation();
+  const navigate = useNavigate();
   const photos = useMemo(() => Object.fromEntries(users.map((u) => [u.id, u.photoURL])), [users]);
 
   const [activeChannel, setActiveChannel] = useState(null);
@@ -308,6 +451,9 @@ export default function Chat() {
   const [newCategoryName, setNewCategoryName] = useState(null); // string quando criando
   const [newChannelFor, setNewChannelFor] = useState(null); // categoryId quando criando
   const [newChannelName, setNewChannelName] = useState("");
+  const [newChannelType, setNewChannelType] = useState("text"); // "text" | "voice"
+  const [newChannelTemp, setNewChannelTemp] = useState(false); // canal de voz temporário
+  const [voiceId, setVoiceId] = useState(null); // canal de voz aberto na área principal
 
   // Caixa de mensagem
   const [text, setText] = useState("");
@@ -355,36 +501,46 @@ export default function Chat() {
   // Libera as pré-visualizações locais ao sair.
   useEffect(
     () => () => {
-      attachments.forEach((a) => URL.revokeObjectURL(a.url));
+      attachments.forEach((a) => a.url && URL.revokeObjectURL(a.url));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
   /* ----- anexos ----- */
-  function addFiles(files) {
-    const imgs = [...files].filter((f) => f.type.startsWith("image/"));
-    if (!imgs.length) return setChatError("Só dá para anexar imagens.");
+  function addFiles(list) {
+    const all = [...list];
+    const ok = all.filter((f) => isImageFile(f) || isDocFile(f));
     setChatError("");
-    const room = MAX_IMAGES - attachments.length;
-    if (room <= 0) return setChatError(`No máximo ${MAX_IMAGES} imagens por mensagem.`);
-    const big = imgs.find((f) => f.size > 20 * 1024 * 1024);
-    if (big) return setChatError("Imagem grande demais (máximo 20 MB).");
-    const next = imgs.slice(0, room).map((file) => ({ id: Math.random().toString(36).slice(2), file, url: URL.createObjectURL(file) }));
+    if (!ok.length) return setChatError("Esse tipo de arquivo não é aceito. Envie imagens, PDF, Word, Excel, PowerPoint, TXT ou ZIP.");
+    const room = MAX_ATTACH - attachments.length;
+    if (room <= 0) return setChatError(`No máximo ${MAX_ATTACH} anexos por mensagem.`);
+    const tooBig = ok.find((f) => f.size > (isImageFile(f) ? MAX_IMAGE_MB : MAX_FILE_MB) * 1024 * 1024);
+    if (tooBig)
+      return setChatError(
+        `"${tooBig.name}" é grande demais (máximo ${isImageFile(tooBig) ? MAX_IMAGE_MB : MAX_FILE_MB} MB).`
+      );
+    const next = ok.slice(0, room).map((file) => ({
+      id: Math.random().toString(36).slice(2),
+      file,
+      kind: isImageFile(file) ? "image" : "file",
+      url: isImageFile(file) ? URL.createObjectURL(file) : "",
+    }));
     setAttachments((a) => [...a, ...next]);
-    if (imgs.length > room) setChatError(`Só couberam ${room} — o máximo é ${MAX_IMAGES} imagens por mensagem.`);
+    if (ok.length > room) setChatError(`Só couberam ${room} — o máximo é ${MAX_ATTACH} anexos por mensagem.`);
+    else if (ok.length < all.length) setChatError("Alguns arquivos foram ignorados porque o tipo não é aceito.");
     inputRef.current?.focus();
   }
   function removeAttachment(id) {
     setAttachments((a) => {
       const gone = a.find((x) => x.id === id);
-      if (gone) URL.revokeObjectURL(gone.url);
+      if (gone?.url) URL.revokeObjectURL(gone.url);
       return a.filter((x) => x.id !== id);
     });
   }
 
   function onPaste(e) {
-    const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith("image/"));
+    const files = [...(e.clipboardData?.files || [])];
     if (files.length) {
       e.preventDefault();
       addFiles(files);
@@ -392,7 +548,7 @@ export default function Chat() {
   }
   function onDrop(e) {
     e.preventDefault();
-    const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type.startsWith("image/"));
+    const files = [...(e.dataTransfer?.files || [])];
     if (files.length) addFiles(files);
   }
 
@@ -425,9 +581,15 @@ export default function Chat() {
     setChatError("");
     try {
       const images = [];
+      const files = [];
       for (const a of attachments) {
-        const ready = await shrinkImage(a.file);
-        images.push((await uploadImage(ready, "landora/chat")).url);
+        if (a.kind === "image") {
+          const ready = await shrinkImage(a.file);
+          images.push((await uploadImage(ready, "landora/chat")).url);
+        } else {
+          const up = await uploadFile(a.file, "landora/chat-files", "raw");
+          files.push({ url: up.url, name: a.file.name, size: a.file.size, type: a.file.type || "" });
+        }
       }
       let audio = null;
       if (voice) {
@@ -438,13 +600,14 @@ export default function Chat() {
         channelId: activeChannel.id,
         text: body,
         ...(images.length ? { images } : {}),
+        ...(files.length ? { files } : {}),
         ...(audio ? { audio } : {}),
         ...(replyTo ? { replyTo: { id: replyTo.id, nickname: replyTo.senderNickname, preview: previewOf(replyTo) } } : {}),
         senderId: user.uid,
         senderNickname: profile?.nickname || "—",
         createdAt: serverTimestamp(),
       });
-      attachments.forEach((a) => URL.revokeObjectURL(a.url));
+      attachments.forEach((a) => a.url && URL.revokeObjectURL(a.url));
       setAttachments([]);
       discardVoice();
       setText("");
@@ -469,7 +632,7 @@ export default function Chat() {
     const v = value.trim();
     setEditingId(null);
     if (v === (m.text || "")) return;
-    if (!v && !imagesOf(m).length && !m.audio) return setChatError("A mensagem não pode ficar vazia. Use excluir.");
+    if (!v && !imagesOf(m).length && !m.files?.length && !m.audio) return setChatError("A mensagem não pode ficar vazia. Use excluir.");
     await updateDoc(doc(db, "chatMessages", m.id), { text: v, edited: true, editedAt: serverTimestamp() });
   }
   async function removeMessage(m) {
@@ -494,6 +657,56 @@ export default function Chat() {
     setTimeout(() => setFlashId((f) => (f === id ? null : f)), 1600);
   }
 
+  /* ----- canais de voz ----- */
+  const voiceChannel = voiceId ? calls.find((c) => c.id === voiceId) : null;
+  const inThisCall = !!voiceChannel && call.active?.id === voiceChannel.id;
+
+  // Canal de voz sumiu (temporário em que todos saíram, ou excluído): volta para o texto.
+  useEffect(() => {
+    if (voiceId && !callsLoading && !calls.find((c) => c.id === voiceId) && call.active?.id !== voiceId) setVoiceId(null);
+  }, [voiceId, calls, callsLoading, call.active]);
+
+  // Esconde a barrinha da call enquanto a call está aberta aqui.
+  useEffect(() => {
+    call.setCallVisible(inThisCall);
+    return () => call.setCallVisible(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inThisCall]);
+
+  // Veio pela barrinha ("Abrir"): mostra a call em andamento.
+  useEffect(() => {
+    if (location.state?.openCall) {
+      if (call.active) {
+        setVoiceId(call.active.id);
+        setShowSidebar(false);
+      }
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
+
+  function openVoice(c) {
+    setVoiceId(c.id);
+    setShowSidebar(false);
+    if (call.active?.id !== c.id) call.join({ id: c.id, name: c.name, fixed: !!c.fixed });
+  }
+  function openText(ch) {
+    setActiveChannel(ch);
+    setVoiceId(null);
+    setShowSidebar(false);
+  }
+  async function deleteVoice(c) {
+    if (!confirm(`Excluir o canal de voz "${c.name}"?`)) return;
+    if (call.active?.id === c.id) await call.leave();
+    if (voiceId === c.id) setVoiceId(null);
+    const [parts, sigs] = await Promise.all([
+      getDocs(collection(db, "calls", c.id, "participants")),
+      getDocs(collection(db, "calls", c.id, "signals")),
+    ]);
+    await Promise.all([...parts.docs, ...sigs.docs].map((d) => deleteDoc(d.ref)));
+    await deleteDoc(doc(db, "calls", c.id));
+  }
+
   /* ----- canais ----- */
   async function createCategory(e) {
     e.preventDefault();
@@ -502,14 +715,34 @@ export default function Chat() {
     setNewCategoryName(null);
   }
 
+  function startNewChannel(categoryId) {
+    setNewChannelFor(categoryId);
+    setNewChannelName("");
+    setNewChannelType("text");
+    setNewChannelTemp(false);
+  }
+
   async function createChannel(e, categoryId) {
     e.preventDefault();
-    if (!newChannelName.trim()) return;
-    const ref = await addDoc(collection(db, "channels"), { name: newChannelName.trim(), categoryId, createdAt: serverTimestamp() });
+    const name = newChannelName.trim();
+    if (!name) return;
     setNewChannelName("");
     setNewChannelFor(null);
-    setActiveChannel({ id: ref.id, name: newChannelName.trim(), categoryId });
-    setShowSidebar(false);
+    if (newChannelType === "voice") {
+      const fixed = !newChannelTemp;
+      const ref = await addDoc(collection(db, "calls"), {
+        name,
+        fixed,
+        categoryId: categoryId || "",
+        createdBy: user.uid,
+        createdByNickname: profile?.nickname || "—",
+        createdAt: serverTimestamp(),
+      });
+      openVoice({ id: ref.id, name, fixed });
+      return;
+    }
+    const ref = await addDoc(collection(db, "channels"), { name, categoryId: categoryId || "", createdAt: serverTimestamp() });
+    openText({ id: ref.id, name, categoryId });
   }
 
   async function deleteChannel(ch) {
@@ -518,15 +751,12 @@ export default function Chat() {
     if (activeChannel?.id === ch.id) setActiveChannel(null);
   }
 
-  const uncategorized = channels.filter((c) => !c.categoryId || !categories.find((cat) => cat.id === c.categoryId));
+  const catIds = new Set(categories.map((c) => c.id));
+  const uncategorized = channels.filter((c) => !c.categoryId || !catIds.has(c.categoryId));
+  const uncategorizedVoice = calls.filter((c) => !c.categoryId || !catIds.has(c.categoryId));
   const renderChannel = (ch) => (
-    <div key={ch.id} className={"chat-channel" + (activeChannel?.id === ch.id ? " active" : "")}>
-      <button
-        onClick={() => {
-          setActiveChannel(ch);
-          setShowSidebar(false);
-        }}
-      >
+    <div key={ch.id} className={"chat-channel" + (!voiceId && activeChannel?.id === ch.id ? " active" : "")}>
+      <button onClick={() => openText(ch)}>
         <Icon name="hash" size={15} />
         <span className="chat-channel-name">{ch.name}</span>
       </button>
@@ -534,6 +764,52 @@ export default function Chat() {
         <Icon name="close" size={13} />
       </button>
     </div>
+  );
+
+  const renderVoice = (c) => (
+    <VoiceChannel
+      key={c.id}
+      c={c}
+      selected={voiceId === c.id}
+      live={call.active?.id === c.id}
+      speakingIds={call.speaking}
+      mySessionId={call.session?.sessionId}
+      onOpen={openVoice}
+      onDelete={deleteVoice}
+    />
+  );
+
+  const renderNewChannelForm = (categoryId) => (
+    <form onSubmit={(e) => createChannel(e, categoryId)} className="chat-new-channel">
+      <div className="chat-type-pick" role="radiogroup" aria-label="Tipo de canal">
+        <button type="button" role="radio" aria-checked={newChannelType === "text"} className={newChannelType === "text" ? "sel" : ""} onClick={() => setNewChannelType("text")}>
+          <Icon name="hash" size={14} /> Texto
+        </button>
+        <button type="button" role="radio" aria-checked={newChannelType === "voice"} className={newChannelType === "voice" ? "sel" : ""} onClick={() => setNewChannelType("voice")}>
+          <Icon name="volume" size={14} /> Voz
+        </button>
+      </div>
+      <input
+        autoFocus
+        value={newChannelName}
+        onChange={(e) => setNewChannelName(e.target.value)}
+        placeholder={newChannelType === "voice" ? "ex: Reunião de vendas" : "nome-do-canal"}
+      />
+      {newChannelType === "voice" && (
+        <label className="chat-temp-check">
+          <input type="checkbox" checked={newChannelTemp} onChange={(e) => setNewChannelTemp(e.target.checked)} />
+          Temporário <span className="hint">(some quando todos saem)</span>
+        </label>
+      )}
+      <div className="chat-new-actions">
+        <button type="button" className="btn-link" onClick={() => setNewChannelFor(null)}>
+          cancelar
+        </button>
+        <button className="btn-link" type="submit" disabled={!newChannelName.trim()}>
+          {newChannelType === "voice" ? "criar e entrar" : "criar"}
+        </button>
+      </div>
+    </form>
   );
 
   const canSend = !sending && !recorder.recording && (text.trim() || attachments.length || voice);
@@ -561,45 +837,52 @@ export default function Chat() {
           <div key={cat.id} className="chat-category">
             <div className="chat-category-head">
               <span>{cat.name}</span>
-              <button className="chat-category-add" onClick={() => setNewChannelFor(cat.id)} title="Novo canal" aria-label="Novo canal">
+              <button className="chat-category-add" onClick={() => startNewChannel(cat.id)} title="Novo canal" aria-label="Novo canal">
                 <Icon name="plus" size={14} />
               </button>
             </div>
-            {newChannelFor === cat.id && (
-              <form onSubmit={(e) => createChannel(e, cat.id)} className="chat-inline-form">
-                <input autoFocus value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} placeholder="nome-do-canal" />
-                <button className="btn-link" type="submit">
-                  criar
-                </button>
-              </form>
-            )}
-            <div className="chat-category-list">{channels.filter((c) => c.categoryId === cat.id).map(renderChannel)}</div>
+            {newChannelFor === cat.id && renderNewChannelForm(cat.id)}
+            <div className="chat-category-list">
+              {channels.filter((c) => c.categoryId === cat.id).map(renderChannel)}
+              {calls.filter((c) => c.categoryId === cat.id).map(renderVoice)}
+            </div>
           </div>
         ))}
 
-        {uncategorized.length > 0 && (
+        {(uncategorized.length > 0 || uncategorizedVoice.length > 0 || newChannelFor === "none") && (
           <div className="chat-category">
             <div className="chat-category-head">
               <span>Sem categoria</span>
+              <button className="chat-category-add" onClick={() => startNewChannel("none")} title="Novo canal" aria-label="Novo canal">
+                <Icon name="plus" size={14} />
+              </button>
             </div>
-            <div className="chat-category-list">{uncategorized.map(renderChannel)}</div>
+            {newChannelFor === "none" && renderNewChannelForm("")}
+            <div className="chat-category-list">
+              {uncategorized.map(renderChannel)}
+              {uncategorizedVoice.map(renderVoice)}
+            </div>
           </div>
         )}
 
-        {categories.length === 0 && <p className="muted empty">Crie uma categoria pra começar.</p>}
+        {categories.length === 0 && uncategorizedVoice.length === 0 && uncategorized.length === 0 && (
+          <p className="muted empty">Crie uma categoria pra começar.</p>
+        )}
       </aside>
 
       <section
         className={"chat-main" + (!showSidebar ? " show" : "")}
         onDragOver={(e) => e.preventDefault()}
-        onDrop={onDrop}
+        onDrop={voiceId ? (e) => e.preventDefault() : onDrop}
       >
         <div className="chat-main-head">
           <button className="btn-link chat-back" onClick={() => setShowSidebar(true)}>
             ‹ canais
           </button>
-          <span className="chat-main-title">{activeChannel ? `# ${activeChannel.name}` : "Selecione um canal"}</span>
-          {pinned.length > 0 && (
+          <span className="chat-main-title">
+            {voiceId ? `🔊 ${voiceChannel?.name || call.active?.name || "Canal de voz"}` : activeChannel ? `# ${activeChannel.name}` : "Selecione um canal"}
+          </span>
+          {!voiceId && pinned.length > 0 && (
             <button
               type="button"
               className={"chat-pins-btn" + (showPinned ? " on" : "")}
@@ -611,6 +894,20 @@ export default function Chat() {
           )}
         </div>
 
+        {voiceId ? (
+          inThisCall || call.active?.id === voiceId ? (
+            <div className="chat-call">
+              <InCall />
+            </div>
+          ) : voiceChannel ? (
+            <VoiceLobby c={voiceChannel} onJoin={openVoice} error={call.error} />
+          ) : (
+            <div className="call-loading">
+              <div className="spinner" />
+            </div>
+          )
+        ) : (
+        <>
         {showPinned && (
           <div className="chat-pins">
             <div className="chat-pins-head">
@@ -675,14 +972,27 @@ export default function Chat() {
 
             {(attachments.length > 0 || voice) && (
               <div className="chat-attachments">
-                {attachments.map((a) => (
-                  <div key={a.id} className="chat-att">
-                    <img src={a.url} alt="" />
-                    <button type="button" onClick={() => removeAttachment(a.id)} disabled={sending} aria-label="Remover imagem">
-                      <Icon name="close" size={13} strokeWidth={2.4} />
-                    </button>
-                  </div>
-                ))}
+                {attachments.map((a) =>
+                  a.kind === "image" ? (
+                    <div key={a.id} className="chat-att">
+                      <img src={a.url} alt="" />
+                      <button type="button" onClick={() => removeAttachment(a.id)} disabled={sending} aria-label="Remover imagem">
+                        <Icon name="close" size={13} strokeWidth={2.4} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div key={a.id} className="chat-att-file">
+                      <span className={"chat-file-icon " + fileKind(a.file.name).cls}>{fileKind(a.file.name).label}</span>
+                      <span className="chat-file-info">
+                        <b>{a.file.name}</b>
+                        <span>{fileSize(a.file.size)}</span>
+                      </span>
+                      <button type="button" onClick={() => removeAttachment(a.id)} disabled={sending} aria-label={`Remover ${a.file.name}`}>
+                        <Icon name="close" size={14} />
+                      </button>
+                    </div>
+                  )
+                )}
                 {voice && (
                   <div className="chat-att-voice">
                     <Icon name="mic" size={16} />
@@ -714,7 +1024,7 @@ export default function Chat() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept={"image/*," + DOC_ACCEPT}
                   multiple
                   hidden
                   onChange={(e) => {
@@ -727,8 +1037,8 @@ export default function Chat() {
                   className="chat-icon-btn"
                   disabled={sending}
                   onClick={() => fileRef.current?.click()}
-                  title="Anexar imagem (ou cole com Ctrl+V / arraste para cá)"
-                  aria-label="Anexar imagem"
+                  title="Anexar imagem ou arquivo — PDF, Word, Excel, ZIP… (ou cole / arraste para cá)"
+                  aria-label="Anexar imagem ou arquivo"
                 >
                   <Icon name="paperclip" />
                 </button>
@@ -764,6 +1074,8 @@ export default function Chat() {
               </form>
             )}
           </div>
+        )}
+        </>
         )}
       </section>
 

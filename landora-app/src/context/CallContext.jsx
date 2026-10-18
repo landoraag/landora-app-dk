@@ -50,6 +50,8 @@ export function CallProvider({ children }) {
   const [active, setActive] = useState(null); // { id, name, fixed }
   const [status, setStatus] = useState("idle"); // idle | joining | live
   const [error, setError] = useState("");
+  // true enquanto a tela da call está aberta no Chat (aí a barrinha da call não aparece).
+  const [callVisible, setCallVisible] = useState(false);
   const [, bump] = useReducer((x) => x + 1, 0);
 
   // Volume de cada pessoa (voz e transmissão de tela), lembrado neste aparelho.
@@ -329,6 +331,8 @@ export function CallProvider({ children }) {
         outputId,
         setOutputId,
         speaking,
+        callVisible,
+        setCallVisible,
         pip: { supported: pipSupported, available: !!pipTrack, active: inPip, enter: enterPip, exit: exitPip },
       }}
     >

@@ -1,8 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp } from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import { useCollection } from "../../lib/useCollection";
-import { useAuth } from "../../context/AuthContext";
 import { useCall } from "../../context/CallContext";
 import Avatar from "../Avatar";
 import { QUALITY_OPTIONS } from "../../lib/webrtc";
@@ -113,123 +109,6 @@ function VideoTile({ track, mirror }) {
   }, [track]);
   // O som vem dos <audio> do provider; o vídeo aqui fica sempre mudo.
   return <video ref={ref} className={mirror ? "mirror" : ""} autoPlay playsInline muted />;
-}
-
-function LiveCount({ callId }) {
-  const [n, setN] = useState(0);
-  useEffect(
-    () =>
-      onSnapshot(collection(db, "calls", callId, "participants"), (snap) => {
-        setN(snap.docs.filter((d) => Math.abs(Date.now() - (d.data().lastSeen || 0)) < 90000).length);
-      }),
-    [callId]
-  );
-  return n > 0 ? <span className="call-live">● {n} na call</span> : <span className="muted">vazia</span>;
-}
-
-/* ---------------- Lista de calls ---------------- */
-function Lobby({ calls }) {
-  const { user, profile } = useAuth();
-  const { join, leave, active, error } = useCall();
-  const [name, setName] = useState("");
-  const [fixed, setFixed] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function createAndJoin(e) {
-    e.preventDefault();
-    const n = name.trim();
-    if (!n) return;
-    setBusy(true);
-    try {
-      const ref = await addDoc(collection(db, "calls"), {
-        name: n,
-        fixed,
-        createdBy: user.uid,
-        createdByNickname: profile?.nickname || "—",
-        createdAt: serverTimestamp(),
-      });
-      setName("");
-      await join({ id: ref.id, name: n, fixed });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function removeCall(call) {
-    if (!confirm(`Excluir a call "${call.name}"?`)) return;
-    if (active?.id === call.id) await leave();
-    const [parts, sigs] = await Promise.all([
-      getDocs(collection(db, "calls", call.id, "participants")),
-      getDocs(collection(db, "calls", call.id, "signals")),
-    ]);
-    await Promise.all([...parts.docs, ...sigs.docs].map((d) => deleteDoc(d.ref)));
-    await deleteDoc(doc(db, "calls", call.id));
-  }
-
-  const fixedCalls = calls.filter((c) => c.fixed);
-  const tempCalls = calls.filter((c) => !c.fixed);
-
-  const renderCard = (c) => (
-    <div key={c.id} className="call-card">
-      <div className="call-card-main">
-        <div className="call-card-name">
-          {c.fixed ? "📌 " : "📞 "}
-          {c.name}
-        </div>
-        <div className="call-card-meta">
-          <LiveCount callId={c.id} />
-          {c.createdByNickname ? <span className="muted"> · criada por {c.createdByNickname}</span> : null}
-        </div>
-      </div>
-      <div className="row-actions">
-        <button className="btn btn-gradient" onClick={() => join({ id: c.id, name: c.name, fixed: !!c.fixed })}>
-          Entrar
-        </button>
-        <button className="btn-link danger" onClick={() => removeCall(c)}>
-          Excluir
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div>
-      <div className="content-header">
-        <h2>Calls</h2>
-        <p className="muted">Voz, câmera e compartilhamento de tela direto entre vocês, sem atraso.</p>
-      </div>
-
-      {error && <p className="auth-error">{error}</p>}
-
-      <form className="inline-form" onSubmit={createAndJoin}>
-        <label className="grow">
-          Nome da call
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Reunião de vendas" />
-        </label>
-        <label className="call-check">
-          <span>
-            <input type="checkbox" checked={fixed} onChange={(e) => setFixed(e.target.checked)} /> Call fixa
-          </span>
-          <span className="hint">Fica salva na lista. As temporárias somem quando todos saem.</span>
-        </label>
-        <button className="btn btn-gradient" type="submit" disabled={busy || !name.trim()}>
-          Criar e entrar
-        </button>
-      </form>
-
-      <h3 className="section-title">Calls fixas</h3>
-      <div className="call-list">
-        {fixedCalls.map(renderCard)}
-        {fixedCalls.length === 0 && <p className="muted">Nenhuma call fixa ainda.</p>}
-      </div>
-
-      <h3 className="section-title">Calls temporárias</h3>
-      <div className="call-list">
-        {tempCalls.map(renderCard)}
-        {tempCalls.length === 0 && <p className="muted">Nenhuma call temporária aberta.</p>}
-      </div>
-    </div>
-  );
 }
 
 /* ---------------- Dentro da call ---------------- */
@@ -428,7 +307,8 @@ function CamTile({ nickname, photoURL, camOn, micOn, track, mine, mirror, speaki
   );
 }
 
-function InCall() {
+// Tela da call (usada dentro do Chat, quando você está num canal de voz).
+export function InCall() {
   const {
     active,
     status,
@@ -459,7 +339,7 @@ function InCall() {
 
   if (!session || status === "joining") {
     return (
-      <div className="full-loader">
+      <div className="call-loading">
         <div className="spinner" />
       </div>
     );
@@ -492,7 +372,7 @@ function InCall() {
     <div className="call-shell">
       <div className="call-head">
         <div>
-          <h2>📞 {active?.name}</h2>
+          <h2>🔊 {active?.name}</h2>
           <p className="muted">
             {peers.length + 1} {peers.length === 0 ? "pessoa (só você por enquanto)" : "pessoas"}
           </p>
@@ -617,10 +497,4 @@ function InCall() {
       {menu && <VolumeMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>
   );
-}
-
-export default function Calls() {
-  const { data: calls } = useCollection("calls", "createdAt", "asc");
-  const { active } = useCall();
-  return active ? <InCall /> : <Lobby calls={calls} />;
 }
