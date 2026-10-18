@@ -1209,3 +1209,18 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue-light)
 .chat-shell.in-call .call-grid:has(> .call-tile:only-child) .call-tile { width: 100%; max-width: min(100%, calc((100vh - 330px) * 16 / 9)); justify-self: center; }
 .chat-shell.in-call .call-tile { max-height: calc(100vh - 330px); }
 .chat-shell.in-call .call-screen video { max-height: calc(100vh - 300px); }
+
+/* ---------- Celular: sem zoom automático e sem a página "andar" para os lados ---------- */
+/* O Safari do iPhone dá zoom sozinho ao tocar num campo com letra menor que 16px
+   (e não tira depois). Em telas de toque, todo campo usa 16px. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
+}
+/* Nada pode deixar a página mais larga que a tela (senão o celular abre com zoom). */
+html, body { max-width: 100%; overflow-x: clip; }
+.shell, .content { min-width: 0; }
+.shell, .content { overflow-x: clip; }
+/* Tabelas largas rolam dentro delas mesmas no celular, em vez de alargar a página. */
+@media (max-width: 700px) {
+  .ledger-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+}
