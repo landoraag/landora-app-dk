@@ -226,6 +226,8 @@ export default function Dashboard() {
               </div>
             }
           >
+          {/* A chave muda a cada aba: a animação de entrada roda de novo em toda troca de tela. */}
+          <div key={location.pathname} className={"page-anim" + (location.pathname.startsWith("/chat") ? " no-slide" : "")}>
           <Routes>
             <Route path="/" element={<Navigate to="/inicio" replace />} />
             <Route path="/inicio" element={<Inicio />} />
@@ -241,6 +243,7 @@ export default function Dashboard() {
             <Route path="/calls" element={<Navigate to="/chat" replace />} />
             <Route path="/perfil" element={<Perfil />} />
           </Routes>
+          </div>
           </Suspense>
           </ErrorBoundary>
         </main>

@@ -36,7 +36,7 @@
       <button id="intro-skip" type="button">Pular</button>
     </div>
     <script>
-      // Toca a intro na primeira abertura de cada sessão (recarregar a mesma janela não repete).
+      // Toca a intro toda vez que o app abre ou a página é atualizada.
       (function () {
         var intro = document.getElementById("intro");
         var video = document.getElementById("intro-video");
@@ -48,15 +48,12 @@
           try { video.pause(); } catch (e) {}
           setTimeout(function () { intro.remove(); }, 500);
         };
-        var seen = false;
-        try { seen = sessionStorage.getItem("landora.introSeen") === "1"; sessionStorage.setItem("landora.introSeen", "1"); } catch (e) {}
-        if (seen) { intro.remove(); return; }
         video.addEventListener("ended", finish);
         video.addEventListener("error", finish); // sem vídeo (ou formato não suportado): abre o app direto
         document.getElementById("intro-skip").addEventListener("click", finish);
         setTimeout(function () { intro.classList.add("can-skip"); }, 1200);
-        // Se o vídeo não começar em 4 s (internet lenta), não segura o app.
-        setTimeout(function () { if (video.currentTime === 0) finish(); }, 4000);
+        // Se o vídeo não começar em 6 s (internet lenta), não segura o app.
+        setTimeout(function () { if (video.currentTime === 0) finish(); }, 6000);
         // Trava de segurança: nunca mais de 20 s.
         setTimeout(finish, 20000);
         // Tenta tocar com som (volume já reduzido no arquivo). Se o navegador bloquear som

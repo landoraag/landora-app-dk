@@ -1567,3 +1567,29 @@ html.has-pseudo-fs, html.has-pseudo-fs body { overflow: hidden !important; }
    para cima de tudo e as barras somem. */
 html.has-pseudo-fs .chat-shell { z-index: 9000 !important; }
 html.has-pseudo-fs .bottom-nav, html.has-pseudo-fs .mobile-topbar, html.has-pseudo-fs .call-bar { display: none !important; }
+
+/* ---------- Animação de troca de tela ----------
+   A tela nova entra subindo de leve e aparecendo. Termina sem "transform" nenhum, para não
+   atrapalhar o que fica preso na tela (chat no celular, tela cheia). */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.992); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes page-fade { from { opacity: 0; } to { opacity: 1; } }
+.page-anim { animation: page-in .38s cubic-bezier(.2,.75,.25,1) backwards; }
+/* O chat fica "preso" na tela no celular: nele só aparece suavemente, sem deslizar. */
+.page-anim.no-slide { animation-name: page-fade; animation-duration: .3s; }
+/* Os cartões da tela entram um pouquinho depois do título, em sequência. */
+@keyframes page-item-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.page-anim .kpi-row > *, .page-anim .home-grid > *, .page-anim .client-grid > *, .page-anim .lp-grid > *, .page-anim .leads-grid > * {
+  animation: page-item-in .42s cubic-bezier(.2,.75,.25,1) backwards;
+}
+.page-anim .kpi-row > :nth-child(2), .page-anim .home-grid > :nth-child(2), .page-anim .client-grid > :nth-child(2), .page-anim .lp-grid > :nth-child(2), .page-anim .leads-grid > :nth-child(2) { animation-delay: .05s; }
+.page-anim .kpi-row > :nth-child(3), .page-anim .client-grid > :nth-child(3), .page-anim .lp-grid > :nth-child(3), .page-anim .leads-grid > :nth-child(3) { animation-delay: .1s; }
+.page-anim .kpi-row > :nth-child(n+4), .page-anim .client-grid > :nth-child(n+4), .page-anim .lp-grid > :nth-child(n+4), .page-anim .leads-grid > :nth-child(n+4) { animation-delay: .15s; }
+/* Spinner de carregamento da aba também aparece suave. */
+.tab-loading { animation: page-fade .25s ease backwards; }
+/* Quem pediu no aparelho para reduzir movimento não vê animação. */
+@media (prefers-reduced-motion: reduce) {
+  .page-anim, .page-anim * , .tab-loading { animation: none !important; }
+}
