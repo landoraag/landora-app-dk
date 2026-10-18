@@ -1753,3 +1753,19 @@ html { background-color: var(--black, #0a0a0a); }
     animation-name: page-item-soft; animation-duration: .5s; animation-timing-function: cubic-bezier(.22,.61,.36,1);
   }
 }
+
+/* Computador (ajuste final): igual ao celular, só que sem desfoque. A tela antiga some e a nova
+   sobe um pouquinho aparecendo. Os cartões não entram mais um a um (a tela entra inteira). */
+@media (min-width: 900px) {
+  ::view-transition-old(root) { animation: vt-pc-out .26s cubic-bezier(.4,0,.2,1) both; }
+  ::view-transition-new(root) { animation: vt-pc-in .5s cubic-bezier(.22,.61,.36,1) .04s both; }
+  @keyframes vt-pc-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px) scale(.995); } }
+  @keyframes vt-pc-in { from { opacity: 0; transform: translateY(12px) scale(.998); } to { opacity: 1; transform: none; } }
+  .page-anim { animation: vt-pc-in .5s cubic-bezier(.22,.61,.36,1) backwards; }
+  .page-anim.no-slide { animation: page-fade .32s ease backwards; }
+  .page-anim.vt-nav { animation: none; }
+  .page-anim .kpi-row > *, .page-anim .home-grid > *, .page-anim .client-grid > *, .page-anim .lp-grid > *, .page-anim .leads-grid > * { animation: none; }
+}
+/* Itens que chegam depois (primeira vez que a lista carrega) aparecem suavemente em vez de pular. */
+@keyframes item-soft { from { opacity: 0; } to { opacity: 1; } }
+.page-anim tbody tr, .page-anim .home-row, .page-anim .task-item, .page-anim .lead-card, .page-anim .lp-card, .page-anim .client-card { animation: item-soft .35s ease backwards; }

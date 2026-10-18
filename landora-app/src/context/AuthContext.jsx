@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { clearCollectionCache } from "../lib/useCollection";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -99,6 +100,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    clearCollectionCache(); // desliga as listas guardadas antes de sair (evita erro de permissão)
     await signOut(auth);
   }
 

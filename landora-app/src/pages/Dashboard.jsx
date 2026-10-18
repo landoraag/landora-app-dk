@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { lazyPage } from "../lib/lazyPage";
+import { useWarmCollections } from "../lib/useCollection";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { NavLink, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -45,6 +46,21 @@ const PATH_LOADER = {
   "/leads": PAGE_LOADERS.Leads,
   "/tarefas": PAGE_LOADERS.Tarefas,
 };
+const WARM = [
+  ["landingPages", "createdAt", "desc"],
+  ["sales", "date", "desc"],
+  ["financeEntries", "date", "desc"],
+  ["clients", "createdAt", "desc"],
+  ["tasks", "createdAt", "desc"],
+  ["subscriptions", "createdAt", "desc"],
+  ["settings"],
+  ["leads", "createdAt", "desc"],
+  ["channels", "createdAt", "asc"],
+  ["chatMessages", "createdAt", "asc"],
+  ["calls", "createdAt", "asc"],
+  ["channelCategories", "createdAt", "asc"],
+  ["users", "createdAt", "asc"],
+];
 function preloadPages() {
   for (const load of Object.values(PAGE_LOADERS)) load().catch(() => {});
 }
@@ -102,6 +118,9 @@ export default function Dashboard() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [drawerOpen]);
+  // Listas usadas pelas abas ficam sempre carregadas: a troca de tela já mostra tudo pronto.
+  useWarmCollections(WARM);
+
   // Baixa as outras abas em segundo plano, 2,5 s depois de abrir.
   useEffect(() => {
     const t = setTimeout(preloadPages, 2500);

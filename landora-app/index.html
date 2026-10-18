@@ -25,6 +25,8 @@
       /* Celular em pé: o vídeo cresce um pouco (o logo fica maior) e as bordas dele se dissolvem na
          cor do fundo, que é a mesma do vídeo; assim a tela toda parece uma coisa só. */
       @media (orientation: portrait) {
+        /* versão do vídeo para celular: limpa (sem granulado) e com fundo preto puro */
+        #intro { background: #000; }
         #intro video { width: 118vw; max-width: none; height: auto; flex: none;
           -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
           mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%); }
@@ -56,7 +58,7 @@
     <!-- Intro: troque o vídeo substituindo public/intro.mp4. -->
     <div id="intro" aria-hidden="true">
       <!-- "muted" + "playsinline" é o que os celulares exigem para o vídeo tocar sozinho. -->
-      <video id="intro-video" src="/intro.mp4" muted autoplay playsinline webkit-playsinline preload="auto"></video>
+      <video id="intro-video" muted autoplay playsinline webkit-playsinline preload="auto"></video>
       <img id="intro-logo" src="/intro-logo.jpg" alt="" />
       <button id="intro-sound" type="button">🔊 Ativar som</button>
       <button id="intro-skip" type="button">Pular</button>
@@ -108,6 +110,9 @@
         setTimeout(finish, 15000);
 
         var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+        var portrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+        // Celular em pé: vídeo limpo, sem a textura de granulado (que no celular fica pixelada).
+        video.src = portrait || touch ? "/intro-mobile.mp4" : "/intro.mp4";
         var playMuted = function () {
           video.muted = true;
           var q = video.play();
