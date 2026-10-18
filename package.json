@@ -1,0 +1,11 @@
+{
+  "name": "landora-app-dk",
+  "private": true,
+  "description": "Atalhos: o projeto fica na pasta landora-app. Estes comandos funcionam daqui também.",
+  "scripts": {
+    "install-app": "npm --prefix landora-app install",
+    "dev": "npm --prefix landora-app run dev",
+    "build": "npm --prefix landora-app run build",
+    "deploy": "npm --prefix landora-app run build && cd landora-app && firebase deploy --only hosting"
+  }
+}
