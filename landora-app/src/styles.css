@@ -1735,3 +1735,21 @@ html { background-color: var(--black, #0a0a0a); }
 @media (prefers-reduced-motion: reduce) {
   .side-panel, .side-link, .side-label, .side-indicator, .side-link svg { animation: none !important; transition: none !important; }
 }
+
+/* Computador: passagem suave (sem desfoque). As duas telas se misturam por um instante: a antiga
+   vai sumindo devagar enquanto a nova aparece deslizando só um pouquinho. */
+@media (min-width: 900px) {
+  ::view-transition-old(root) { animation: vt-soft-out .32s cubic-bezier(.4,0,.2,1) both; }
+  ::view-transition-new(root) { animation: vt-soft-in .48s cubic-bezier(.22,.61,.36,1) both; }
+  @keyframes vt-soft-out { from { opacity: 1; } to { opacity: 0; transform: translateX(-10px); } }
+  @keyframes vt-soft-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+  .page-anim { animation-name: page-soft-in; animation-duration: .48s; animation-timing-function: cubic-bezier(.22,.61,.36,1); }
+  @keyframes page-soft-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+  .page-anim.no-slide { animation-name: page-fade; animation-duration: .32s; }
+  .page-anim.vt-nav { animation: none; }
+  /* cartões entram com um deslize bem curto */
+  @keyframes page-item-soft { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .page-anim .kpi-row > *, .page-anim .home-grid > *, .page-anim .client-grid > *, .page-anim .lp-grid > *, .page-anim .leads-grid > * {
+    animation-name: page-item-soft; animation-duration: .5s; animation-timing-function: cubic-bezier(.22,.61,.36,1);
+  }
+}
