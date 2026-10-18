@@ -50,6 +50,8 @@ export default function Dashboard() {
 
   // Fecha o menu ☰ ao trocar de aba; Esc também fecha.
   useEffect(() => setDrawerOpen(false), [location.pathname]);
+  // Cada aba abre no topo.
+  useEffect(() => window.scrollTo(0, 0), [location.pathname]);
   useEffect(() => {
     if (!drawerOpen) return undefined;
     const onKey = (e) => e.key === "Escape" && setDrawerOpen(false);

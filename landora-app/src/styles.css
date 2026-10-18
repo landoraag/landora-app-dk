@@ -34,7 +34,8 @@ button, input, select, textarea { font-family: inherit; font-size: 0.95rem; }
 a { color: inherit; }
 
 /* ---------- Loader ---------- */
-.full-loader { height: 100vh; display: flex; align-items: center; justify-content: center; }
+/* Presa na tela inteira: não cria espaço para a página rolar enquanto carrega. */
+.full-loader { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: var(--black); overflow: hidden; touch-action: none; }
 .spinner {
   width: 36px; height: 36px; border-radius: 50%;
   border: 3px solid var(--gray-dark);

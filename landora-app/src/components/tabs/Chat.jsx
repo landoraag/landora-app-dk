@@ -476,6 +476,13 @@ export default function Chat() {
 
   const bottomRef = useRef(null);
   const shellRef = useRef(null);
+  const listRef = useRef(null); // a lista de mensagens (só ela rola)
+
+  // Rola a lista de mensagens até o fim, sem mexer na página.
+  const scrollListToEnd = (smooth) => {
+    const c = listRef.current;
+    if (c) c.scrollTo({ top: c.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+  };
 
   // A página atrás do chat não rola (no celular aparecia uma segunda barra de rolagem).
   useEffect(() => {
@@ -492,7 +499,7 @@ export default function Chat() {
     const update = () => {
       const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       el.style.setProperty("--kb", kb > 80 ? `${Math.round(kb)}px` : "0px");
-      if (kb > 80) bottomRef.current?.scrollIntoView({ block: "end" });
+      if (kb > 80) scrollListToEnd(false);
     };
     update();
     vv.addEventListener("resize", update);
@@ -541,8 +548,14 @@ export default function Chat() {
   );
   const pinned = useMemo(() => messages.filter((m) => m.pinned), [messages]);
 
+  // Ao abrir um canal vai direto para o fim; mensagem nova chega rolando suave.
+  const lastChannel = useRef(null);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const changed = lastChannel.current !== activeChannel?.id;
+    lastChannel.current = activeChannel?.id;
+    scrollListToEnd(!changed);
+    // depois que imagens carregarem, garante o fim
+    if (changed) setTimeout(() => scrollListToEnd(false), 350);
   }, [messages.length, activeChannel?.id]);
 
   // Trocar de canal limpa o que estava em andamento.
@@ -716,7 +729,11 @@ export default function Chat() {
     const el = msgRefs.current.get(id);
     if (!el) return setChatError("Essa mensagem não existe mais.");
     setShowPinned(false);
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const c = listRef.current;
+    if (c) {
+      const top = el.getBoundingClientRect().top - c.getBoundingClientRect().top + c.scrollTop;
+      c.scrollTo({ top: top - c.clientHeight / 2 + el.offsetHeight / 2, behavior: "smooth" });
+    }
     setFlashId(id);
     setTimeout(() => setFlashId((f) => (f === id ? null : f)), 1600);
   }
@@ -1004,7 +1021,7 @@ export default function Chat() {
           </div>
         )}
 
-        <div className="chat-messages" onClick={(e) => e.target === e.currentTarget && setSelectedId(null)}>
+        <div ref={listRef} className="chat-messages" onClick={(e) => e.target === e.currentTarget && setSelectedId(null)}>
           {messages.map((m) => (
             <Message
               key={m.id}
