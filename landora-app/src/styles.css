@@ -1226,16 +1226,68 @@ html, body { max-width: 100%; overflow-x: clip; }
 }
 
 /* ---------- Notificações ---------- */
-.notif-card { margin-top: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
-.notif-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.notif-head h3 { font-size: 1rem; margin-bottom: 4px; }
-.notif-head .muted { max-width: 440px; }
-.notif-kinds { display: grid; grid-template-columns: 1fr; gap: 8px; }
-@media (min-width: 600px) { .notif-kinds { grid-template-columns: 1fr 1fr; } }
-.notif-kind { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 0.86rem; cursor: pointer; }
-.notif-kind input { width: 18px; height: 18px; accent-color: var(--blue-light); }
 .notify-prompt { position: fixed; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 110; display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid rgba(0,87,255,0.55); border-radius: 12px; padding: 10px 10px 10px 14px; font-size: 0.84rem; box-shadow: 0 10px 28px rgba(0,0,0,0.5); }
 @media (min-width: 700px) { .notify-prompt { left: auto; right: 20px; width: 420px; } }
 .notify-prompt span { flex: 1; }
 .notify-prompt a { background: var(--gradient); color: white; text-decoration: none; font-weight: 700; border-radius: 8px; padding: 6px 12px; white-space: nowrap; }
 .notify-prompt button { background: none; border: none; color: var(--gray-soft); cursor: pointer; font-size: 0.9rem; padding: 4px 6px; }
+
+/* ---------- Chat no celular: encaixado entre o topo e o menu de baixo ---------- */
+/* O menu de baixo tem altura fixa, para o chat saber exatamente onde termina. */
+:root { --bottom-nav-h: 62px; }
+@media (max-width: 899px) {
+  .bottom-nav { height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); align-items: center; }
+  /* "100vh" no iPhone é maior que a área visível; por isso o chat fica preso nas bordas da tela. */
+  .chat-shell,
+  .chat-shell.in-call {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    left: 8px;
+    right: 8px;
+    /* Teclado aberto (--kb vem do Chat.jsx): o chat termina logo acima dele. */
+    bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 8px), calc(var(--kb, 0px) + 8px));
+    height: auto;
+    margin: 0;
+    z-index: 15;
+  }
+  .chat-messages { overscroll-behavior: contain; }
+  /* Barrinha da call em outras abas fica logo acima do menu de baixo. */
+  .call-bar { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 6px); }
+}
+
+/* ---------- Card de notificações (Perfil) ---------- */
+.notif-card { margin-top: 20px; background: linear-gradient(180deg, #151a25 0%, #0f131c 100%); border: 1px solid rgba(255,255,255,0.07); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 12px 34px rgba(0,0,0,0.35); max-width: 980px; }
+.notif-top { display: grid; grid-template-columns: auto 1fr; gap: 14px 16px; align-items: start; }
+@media (min-width: 760px) { .notif-top { grid-template-columns: auto 1fr auto; align-items: center; } }
+.notif-icon { width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--gray-soft); border: 1px solid var(--border); }
+.notif-icon.on { background: rgba(0,87,255,0.16); color: #7fa8ff; border-color: rgba(0,87,255,0.45); box-shadow: 0 0 22px rgba(0,87,255,0.25); }
+.notif-title { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.notif-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.notif-title h3 { font-size: 1.05rem; }
+.notif-title .muted { max-width: 560px; line-height: 1.45; }
+.notif-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,0.06); color: var(--gray-soft); }
+.notif-pill i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.notif-pill.on { background: rgba(34,197,94,0.14); color: #4ade80; }
+.notif-pill.warn { background: rgba(245,158,11,0.14); color: #fbbf24; }
+.notif-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+@media (min-width: 760px) { .notif-actions { grid-column: auto; justify-content: flex-end; } }
+.notif-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 640px) { .notif-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1100px) { .notif-grid { grid-template-columns: repeat(3, 1fr); } }
+.notif-row { display: flex; align-items: center; gap: 12px; text-align: left; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; color: var(--text); cursor: pointer; transition: border-color .15s, background .15s; font: inherit; }
+.notif-row:hover { border-color: rgba(0,87,255,0.55); }
+.notif-row.checked { background: rgba(0,87,255,0.07); border-color: rgba(0,87,255,0.35); }
+.notif-row-icon { flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--gray-soft); }
+.notif-row.checked .notif-row-icon { background: rgba(0,87,255,0.18); color: #7fa8ff; }
+.notif-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notif-row-text b { font-size: 0.88rem; font-weight: 600; }
+.notif-row-text span { font-size: 0.74rem; color: var(--gray-soft); }
+.switch { flex: none; position: relative; width: 38px; height: 22px; border-radius: 999px; background: rgba(255,255,255,0.12); transition: background .18s; }
+.switch span { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; transition: transform .18s; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.notif-row.checked .switch { background: var(--blue-light); }
+.notif-row.checked .switch span { transform: translateX(16px); }
+.notif-row:focus-visible { outline: 2px solid var(--blue-light); outline-offset: 2px; }
+.notif-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; }
+.notif-foot .muted { font-size: 0.78rem; }
+.notif-ok { color: #4ade80; font-size: 0.8rem; }
+.notif-foot .auth-error { font-size: 0.8rem; }

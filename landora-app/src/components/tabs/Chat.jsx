@@ -475,6 +475,27 @@ export default function Chat() {
   const [flashId, setFlashId] = useState(null);
 
   const bottomRef = useRef(null);
+  const shellRef = useRef(null);
+
+  // Celular: quando o teclado abre, o chat encolhe para a caixa de mensagem ficar logo acima dele
+  // (o Safari do iPhone não faz isso sozinho).
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const el = shellRef.current;
+    if (!vv || !el) return undefined;
+    const update = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      el.style.setProperty("--kb", kb > 80 ? `${Math.round(kb)}px` : "0px");
+      if (kb > 80) bottomRef.current?.scrollIntoView({ block: "end" });
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
   const fileRef = useRef(null);
   const inputRef = useRef(null);
   const msgRefs = useRef(new Map());
@@ -857,7 +878,7 @@ export default function Chat() {
   const canSend = !sending && !recorder.recording && (text.trim() || attachments.length || voice);
 
   return (
-    <div className={"chat-shell" + (inThisCall ? " in-call" : "") + (channelsHidden ? " channels-hidden" : "")}>
+    <div ref={shellRef} className={"chat-shell" + (inThisCall ? " in-call" : "") + (channelsHidden ? " channels-hidden" : "")}>
       <aside className={"chat-sidebar" + (showSidebar ? " show" : "")}>
         <div className="chat-sidebar-head">
           <span>Canais</span>

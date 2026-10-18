@@ -34,12 +34,34 @@ const TOKEN_KEY = "landora.push.token";
 
 // Tipos de aviso (a chave é o que vai no Firestore e na função).
 export const PUSH_KINDS = [
-  { key: "chat", label: "Mensagens novas no chat" },
-  { key: "call", label: "Alguém entrou numa call" },
-  { key: "task", label: "Tarefas novas" },
-  { key: "lead", label: "Leads novos" },
-  { key: "sale", label: "Vendas novas" },
+  { key: "chat", label: "Mensagens no chat", desc: "Novas mensagens em qualquer canal", icon: "chat" },
+  { key: "call", label: "Calls", desc: "Quando alguém entra num canal de voz", icon: "volume" },
+  { key: "task", label: "Tarefas", desc: "Quando uma tarefa é criada", icon: "tarefas" },
+  { key: "lead", label: "Leads", desc: "Quando um lead é cadastrado", icon: "leads" },
+  { key: "sale", label: "Vendas", desc: "Quando uma venda é registrada", icon: "vendas" },
 ];
+
+export function deviceLabel() {
+  if (typeof navigator === "undefined") return "";
+  const ua = navigator.userAgent;
+  const device = isIOS() ? "iPhone/iPad" : /Android/i.test(ua) ? "Android" : /Mac/i.test(ua) ? "Mac" : /Windows/i.test(ua) ? "Windows" : "Computador";
+  const browser = /Edg\//.test(ua) ? "Edge" : /OPR\/|Opera/.test(ua) ? "Opera" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "navegador";
+  return `${device} · ${browser}`;
+}
+
+// Manda um aviso de teste só para os SEUS aparelhos. Devolve quantos receberam.
+export async function sendTestPush() {
+  if (!NOTIFY_URL || !auth.currentUser) throw new Error("Notificações não configuradas.");
+  const idToken = await auth.currentUser.getIdToken();
+  const res = await fetch(NOTIFY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ kind: "test", title: "🔔 Teste do Landora", body: "Se você está vendo isto, as notificações funcionam!", url: "/perfil", tag: "test" }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Falha ao enviar (${res.status}).`);
+  return data.sent || 0;
+}
 export const DEFAULT_PREFS = Object.fromEntries(PUSH_KINDS.map((k) => [k.key, true]));
 
 const isElectron = () => typeof navigator !== "undefined" && /Electron/i.test(navigator.userAgent);

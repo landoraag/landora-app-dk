@@ -22,7 +22,7 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || `${APP_URL},https://landora-app-
   .split(",")
   .map((s) => s.trim().replace(/\/$/, ""))
   .filter(Boolean);
-const KINDS = new Set(["chat", "call", "task", "lead", "sale"]);
+const KINDS = new Set(["chat", "call", "task", "lead", "sale", "test"]);
 
 /* ---------------- conta de serviço ---------------- */
 function serviceAccount() {
@@ -220,7 +220,13 @@ export default async function handler(req, res) {
     };
 
     const token = await accessToken(sa);
-    const devices = (await listDevices(projectId, token)).filter((d) => d.uid && d.uid !== senderUid && d.prefs[kind] !== false);
+    // "test" vai só para os aparelhos de quem pediu (botão "Enviar teste" no Perfil);
+    // os outros tipos vão para todo mundo, menos quem fez a ação.
+    const all = await listDevices(projectId, token);
+    const devices =
+      kind === "test"
+        ? all.filter((d) => d.uid === senderUid)
+        : all.filter((d) => d.uid && d.uid !== senderUid && d.prefs[kind] !== false);
 
     const results = await Promise.all(devices.map((d) => sendOne(projectId, token, d, msg).then((r) => [d, r])));
     await Promise.all(results.filter(([, r]) => r === "gone").map(([d]) => deleteDevice(d.name, token)));
