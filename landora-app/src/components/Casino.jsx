@@ -3,6 +3,7 @@ import { onSnapshot } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { useCollection } from "../lib/useCollection";
 import Avatar from "./Avatar";
+import { CreateTable } from "./Tables";
 import {
   CHICKEN_LEVELS,
   COINFLIP_PAYOUT,
@@ -27,10 +28,10 @@ import {
 } from "../lib/casino";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const fmtX = (x) => `${x.toFixed(2).replace(".", ",")}x`;
+export const fmtX = (x) => `${x.toFixed(2).replace(".", ",")}x`;
 
 /* ---------------- carteira ---------------- */
-function useWallet() {
+export function useWallet() {
   const { user, profile } = useAuth();
   const [wallet, setWallet] = useState(null);
   useEffect(() => {
@@ -55,7 +56,7 @@ function useRound() {
 }
 
 /* ---------------- escolher aposta ---------------- */
-function BetPicker({ value, onChange, balance, disabled }) {
+export function BetPicker({ value, onChange, balance, disabled }) {
   const set = (v) => onChange(Math.max(1, Math.min(Math.floor(v) || 0, Math.max(1, Math.floor(balance || 0)))));
   return (
     <div className="bet-picker">
@@ -90,7 +91,7 @@ function BetPicker({ value, onChange, balance, disabled }) {
   );
 }
 
-function ResultBanner({ net, label }) {
+export function ResultBanner({ net, label }) {
   if (net == null) return null;
   return (
     <div className={"casino-result " + (net > 0 ? "win" : net < 0 ? "lose" : "push")}>
@@ -101,7 +102,7 @@ function ResultBanner({ net, label }) {
 }
 
 /* ---------------- Blackjack ---------------- */
-function PlayingCard({ c, hidden, i }) {
+export function PlayingCard({ c, hidden, i }) {
   const red = c && (c.s === "♥" || c.s === "♦");
   return (
     <div className={"pcard" + (hidden ? " back" : "") + (red ? " red" : "")} style={{ "--i": i }}>
@@ -583,10 +584,11 @@ function Roulette({ wallet, onError }) {
 }
 
 /* ---------------- Ranking ---------------- */
-function Ranking() {
+export function Ranking() {
   const { user } = useAuth();
   const { data } = useCollection("wallets");
-  const list = useMemo(() => [...data].sort((a, b) => (b.balance || 0) - (a.balance || 0)), [data]);
+  const total = (w) => (w.balance || 0) + (w.bank || 0);
+  const list = useMemo(() => [...data].sort((a, b) => total(b) - total(a)), [data]);
   return (
     <div className="ranking">
       {list.map((w, i) => (
@@ -596,10 +598,10 @@ function Ranking() {
           <div className="rank-name">
             <b>{w.nickname}</b>
             <span>
-              {w.wins || 0} vitórias · maior prêmio {coins(w.biggestWin || 0)}
+              carteira {coins(w.balance)} · banco {coins(w.bank || 0)} · {w.wins || 0} vitórias
             </span>
           </div>
-          <b className="rank-bal">{coins(w.balance)}</b>
+          <b className="rank-bal">{coins(total(w))}</b>
         </div>
       ))}
       {list.length === 0 && <p className="muted">Ninguém jogou ainda.</p>}
@@ -649,6 +651,9 @@ export function CasinoBar() {
         <button type="button" className="casino-rank-btn" onClick={() => setOpen("ranking")}>
           🏆 Ranking
         </button>
+        <button type="button" className="casino-pvp-btn" onClick={() => setOpen("pvp")}>
+          ⚔️ Desafiar
+        </button>
         {dailyMsg && <span className="casino-toast">{dailyMsg}</span>}
       </div>
       <div className="casino-games">
@@ -667,14 +672,20 @@ export function CasinoBar() {
         <div className="modal-backdrop casino-backdrop" onClick={() => setOpen(null)}>
           <div className={"casino-modal" + (game ? " g-" + game.id : "")} onClick={(e) => e.stopPropagation()}>
             <header className="casino-modal-head">
-              <h3>{game ? `${game.icon} ${game.name}` : "🏆 Ranking"}</h3>
+              <h3>{game ? `${game.icon} ${game.name}` : open === "pvp" ? "⚔️ Novo desafio" : "🏆 Ranking"}</h3>
               <span className="casino-modal-bal">{wallet ? coins(wallet.balance) : ""}</span>
               <button type="button" className="modal-close" onClick={() => setOpen(null)} aria-label="Fechar">
                 ✕
               </button>
             </header>
             {error && <p className="auth-error">{error}</p>}
-            {game ? <game.C wallet={wallet} onError={setError} /> : <Ranking />}
+            {game ? (
+              <game.C wallet={wallet} onError={setError} />
+            ) : open === "pvp" ? (
+              <CreateTable wallet={wallet} onDone={() => setOpen(null)} />
+            ) : (
+              <Ranking />
+            )}
           </div>
         </div>
       )}
@@ -689,10 +700,12 @@ export function GameResultCard({ game }) {
     <div className={"game-card " + (net > 0 ? "win" : net < 0 ? "lose" : "push") + " t-" + game.type}>
       <div className="gc-head">
         <b>{GAME_NAMES[game.type] || "🎲 Jogo"}</b>
-        <span className="gc-net">{net > 0 ? `+${coins(net)}` : net < 0 ? `-${coins(-net)}` : coins(0)}</span>
+        {!["pay", "loan", "admin"].includes(game.type) && (
+          <span className="gc-net">{net > 0 ? `+${coins(net)}` : net < 0 ? `-${coins(-net)}` : coins(0)}</span>
+        )}
       </div>
       {game.detail && <div className="gc-detail">{game.detail}</div>}
-      {game.type !== "daily" && <div className="gc-bet">Aposta {coins(game.bet)}</div>}
+      {game.bet > 0 && <div className="gc-bet">Aposta {coins(game.bet)}</div>}
     </div>
   );
 }

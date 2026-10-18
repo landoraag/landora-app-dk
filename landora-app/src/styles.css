@@ -1969,3 +1969,142 @@ html { background-color: var(--black, #0a0a0a); }
 .game-card.lose .gc-net { color: #f87171; }
 .gc-detail { font-size: 0.78rem; color: rgba(255,255,255,0.75); margin-top: 3px; }
 .gc-bet { font-size: 0.7rem; color: var(--gray-soft); margin-top: 2px; }
+
+/* ---------- Desafios (mesas entre jogadores) ---------- */
+.casino-pvp-btn { border: 1px solid rgba(168,85,247,0.6); background: linear-gradient(135deg, rgba(168,85,247,0.3), rgba(0,87,255,0.25)); color: #fff; border-radius: 999px; padding: 7px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: transform .15s, box-shadow .2s; }
+.casino-pvp-btn:hover { box-shadow: 0 0 18px rgba(168,85,247,0.35); }
+.casino-pvp-btn:active { transform: scale(.95); }
+.pvp-games { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pvp-game { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer; transition: border-color .2s, background .2s, transform .15s; }
+.pvp-game span { font-size: 1.5rem; }
+.pvp-game b { font-size: 0.72rem; text-align: center; line-height: 1.15; }
+.pvp-game.sel { border-color: #a855f7; background: rgba(168,85,247,0.18); }
+.pvp-game:active { transform: scale(.96); }
+.pvp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.82rem; color: var(--gray-soft); }
+.seg.small button { padding: 6px 12px; }
+.pvp-people { display: flex; flex-wrap: wrap; gap: 6px; max-height: 190px; overflow-y: auto; }
+.pvp-person { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px 5px 5px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer; font-size: 0.82rem; }
+.pvp-person.sel { border-color: #3b82f6; background: rgba(0,87,255,0.22); }
+.pvp-person em { font-style: normal; font-size: 0.7rem; color: #fde68a; }
+.pvp-person:disabled { opacity: .4; }
+
+.table-card { margin-top: 2px; min-width: min(340px, 72vw); max-width: 440px; padding: 12px; border-radius: 14px; background: linear-gradient(160deg, rgba(168,85,247,0.14), rgba(0,87,255,0.08)); border: 1px solid rgba(168,85,247,0.35); display: flex; flex-direction: column; gap: 9px; }
+.table-card.loading { opacity: .6; font-size: 0.8rem; }
+.table-card.st-done { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
+.table-card.st-cancelled { opacity: .55; border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); }
+.tc-head { display: flex; align-items: center; gap: 10px; }
+.tc-icon { font-size: 1.6rem; }
+.tc-title { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.tc-title b { font-size: 0.92rem; }
+.tc-title span { font-size: 0.72rem; color: var(--gray-soft); }
+.tc-status { font-size: 0.66rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; background: rgba(255,255,255,0.08); }
+.tc-status.s-lobby { background: rgba(251,191,36,0.18); color: #fde68a; }
+.tc-status.s-playing { background: rgba(34,197,94,0.2); color: #86efac; animation: casino-pulse 2s infinite; }
+.tc-players { display: flex; flex-wrap: wrap; gap: 6px; }
+.tc-player { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; border-radius: 999px; background: rgba(0,0,0,0.25); font-size: 0.78rem; }
+.tc-player.win { background: rgba(251,191,36,0.2); box-shadow: 0 0 0 1px rgba(251,191,36,0.5); }
+.tc-player i { font-style: normal; }
+.tc-player.empty { padding: 5px 12px; border: 1px dashed rgba(255,255,255,0.2); background: none; color: var(--gray-soft); }
+.tc-note { font-size: 0.74rem; color: rgba(255,255,255,0.7); }
+.tc-result { display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; }
+.tc-mine { font-size: 0.76rem; color: #86efac; }
+.tc-mine.lose { color: #fca5a5; }
+.tc-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.tc-actions .btn { padding: 7px 12px; font-size: 0.82rem; }
+.table-card .auth-error { margin: 0; font-size: 0.78rem; }
+
+.pvp-turn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,0.06); font-size: 0.86rem; }
+.pvp-turn.mine { background: rgba(34,197,94,0.18); border: 1px solid rgba(34,197,94,0.45); animation: casino-pulse 1.6s infinite; }
+.pvp-clock { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--gray-soft); font-size: 0.78rem; }
+.pvp-hands { display: flex; flex-direction: column; gap: 10px; max-height: 52vh; overflow-y: auto; }
+.pvp-hand { padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid transparent; transition: border-color .2s, background .2s; }
+.pvp-hand.cur { border-color: rgba(251,191,36,0.6); background: rgba(251,191,36,0.08); }
+.pvp-hand.win { border-color: rgba(34,197,94,0.6); background: rgba(34,197,94,0.1); }
+.pvp-hand .bj-cards { min-height: 0; }
+.pvp-hand .pcard { width: 52px; height: 74px; }
+.pvp-hand .pc-suit { font-size: 1.5rem; }
+.bj-tag.bust { background: rgba(239,68,68,0.25); color: #fca5a5; }
+.pvp-order { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pvp-seat { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 10px; min-width: 70px; border-radius: 12px; background: rgba(255,255,255,0.05); font-size: 0.74rem; border: 1px solid transparent; transition: transform .25s cubic-bezier(.22,1.3,.36,1), border-color .2s; }
+.pvp-seat i { font-style: normal; font-size: 0.7rem; color: var(--gray-soft); }
+.pvp-seat.cur { border-color: rgba(251,191,36,0.7); background: rgba(251,191,36,0.12); transform: translateY(-3px); }
+.pvp-seat.dead { border-color: rgba(239,68,68,0.6); background: rgba(239,68,68,0.15); filter: grayscale(.6); }
+
+.race { display: flex; flex-direction: column; gap: 8px; }
+.race-row { padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,0.22); border: 1px solid transparent; }
+.race-row.me { border-color: rgba(0,87,255,0.45); }
+.race-row.win { border-color: rgba(34,197,94,0.6); background: rgba(34,197,94,0.1); }
+.race-name { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; margin-bottom: 6px; }
+.race-name b { margin-left: auto; color: #fde68a; }
+.race-road { display: flex; gap: 2px; }
+.race-lane { flex: 1; height: 26px; border-radius: 4px; background: #353b48; display: grid; place-items: center; font-size: 0.9rem; transition: background .25s; }
+.race-lane.ok { background: #2f5d43; }
+.race-lane.dead { background: #7f1d1d; }
+.race-state { margin-top: 4px; font-size: 0.7rem; color: var(--gray-soft); display: flex; gap: 8px; align-items: center; }
+
+.coin.pvp-spin { transition: none; animation: coin-pvp 1.8s cubic-bezier(.2,.75,.2,1) forwards; }
+.coin.pvp-spin.to-coroa { animation-name: coin-pvp-coroa; }
+@keyframes coin-pvp { from { transform: rotateY(0); } to { transform: rotateY(1800deg); } }
+@keyframes coin-pvp-coroa { from { transform: rotateY(0); } to { transform: rotateY(1980deg); } }
+
+/* ---------- #economia ---------- */
+.eco-bar { background: radial-gradient(120% 140% at 0% 0%, rgba(34,197,94,0.14), transparent 55%), radial-gradient(120% 140% at 100% 0%, rgba(251,191,36,0.12), transparent 55%); }
+.casino-wallet.bank { margin-right: auto; }
+.casino-wallet.bank b { color: #93c5fd; text-shadow: none; }
+.eco-bar .casino-wallet:first-child { margin-right: 14px; }
+.eco-top-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.casino-rank-btn.admin { border-color: rgba(239,68,68,0.5); color: #fca5a5; }
+.eco-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.casino-game.g-work { --g1: #1e3a5f; --g2: #0f1d30; --g3: rgba(59,130,246,0.28); }
+.casino-game.g-daily { --g1: #4a3510; --g2: #261b08; --g3: rgba(251,191,36,0.3); }
+.casino-game.g-daily.ready { box-shadow: 0 0 0 1px rgba(251,191,36,0.6); animation: casino-pulse 2s infinite; }
+.casino-game.g-bank { --g1: #133b4a; --g2: #0a1f27; --g3: rgba(56,189,248,0.25); }
+.casino-game.g-pay { --g1: #14432c; --g2: #0a2217; --g3: rgba(34,197,94,0.25); }
+.casino-game.g-rob { --g1: #3a1530; --g2: #1d0a18; --g3: rgba(236,72,153,0.28); }
+.casino-game.g-loan { --g1: #2e2a5c; --g2: #16142e; --g3: rgba(129,140,248,0.3); }
+.casino-game:disabled { opacity: .55; cursor: default; }
+@media (max-width: 1100px) and (min-width: 900px) { .eco-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.casino-toast.bad { border-color: rgba(239,68,68,0.5); color: #fca5a5; }
+.casino-toast { max-width: min(420px, 90vw); }
+.eco-msg { padding: 9px 12px; border-radius: 12px; margin-bottom: 10px; font-size: 0.84rem; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #bbf7d0; animation: item-soft .2s ease; }
+.eco-msg.bad { background: rgba(239,68,68,0.14); border-color: rgba(239,68,68,0.4); color: #fecaca; }
+.eco-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.eco-split div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,0.25); }
+.eco-split span { font-size: 0.7rem; color: var(--gray-soft); }
+.eco-split b { font-size: 1.1rem; color: #fde68a; }
+.eco-wait { margin: 0; text-align: center; padding: 16px; border-radius: 12px; background: rgba(255,255,255,0.05); }
+.eco-sub { margin: 4px 0 0; font-size: 0.85rem; color: var(--gray-soft); }
+.eco-note { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 12px; color: var(--text); }
+.eco-rules p { margin: 0 0 10px; color: rgba(255,255,255,0.8); }
+.eco-rules ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 0.86rem; line-height: 1.45; color: rgba(255,255,255,0.85); }
+.loan-list { display: flex; flex-direction: column; gap: 8px; }
+.loan-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,0.22); border: 1px solid rgba(129,140,248,0.3); }
+.loan-row.overdue { border-color: rgba(239,68,68,0.6); }
+.loan-card .loan-row { background: none; border: none; padding: 0; }
+.loan-card { background: linear-gradient(160deg, rgba(129,140,248,0.16), rgba(0,0,0,0.1)); border-color: rgba(129,140,248,0.4); }
+.loan-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.86rem; }
+.loan-status { font-size: 0.66rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); white-space: nowrap; }
+.loan-row.s-pending .loan-status { background: rgba(251,191,36,0.18); color: #fde68a; }
+.loan-row.s-active .loan-status { background: rgba(129,140,248,0.25); color: #c7d2fe; }
+.loan-row.overdue .loan-status { background: rgba(239,68,68,0.25); color: #fca5a5; }
+.loan-row.s-paid .loan-status, .loan-row.s-collected .loan-status { background: rgba(34,197,94,0.2); color: #86efac; }
+.loan-info { font-size: 0.76rem; color: rgba(255,255,255,0.7); }
+.loan-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.loan-actions .btn, .loan-actions .btn-cash, .loan-actions .btn-danger-solid { padding: 7px 12px; font-size: 0.8rem; }
+.loan-pay-input { width: 100px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 7px 10px; color: var(--text); }
+.admin-all { display: flex; gap: 8px; align-items: flex-end; }
+.admin-all .bet-picker { flex: 1; }
+.admin-list { display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow-y: auto; }
+.admin-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 12px; background: rgba(255,255,255,0.04); }
+.admin-name { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.admin-name b { font-size: 0.86rem; }
+.admin-name span { font-size: 0.7rem; color: var(--gray-soft); }
+.admin-row input { width: 86px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 8px; color: var(--text); }
+.admin-row button { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: var(--text); font-weight: 800; cursor: pointer; }
+.admin-row button:hover { background: rgba(255,255,255,0.12); }
+@media (max-width: 899px) {
+  .pvp-games { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eco-bar .casino-wallet:first-child { margin-right: 8px; }
+  .casino-top { row-gap: 8px; }
+  .eco-top-actions { width: 100%; }
+}

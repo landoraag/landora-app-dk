@@ -13,7 +13,13 @@ export const DAILY_AMOUNT = 500;
 export const CASINO_CHANNEL_ID = "cassino";
 export const CASINO_CATEGORY_ID = "entretenimento";
 
+export const ECONOMY_CHANNEL_ID = "economia";
 export const isCasinoChannel = (ch) => !!ch && (ch.kind === "casino" || ch.id === CASINO_CHANNEL_ID);
+export const isEconomyChannel = (ch) => !!ch && (ch.kind === "economy" || ch.id === ECONOMY_CHANNEL_ID);
+
+// Quem administra a economia (dar/tirar moedas, zerar tudo).
+export const ADMIN_EMAILS = ["muzelleitedavi@gmail.com"];
+export const isAdminEmail = (email) => ADMIN_EMAILS.includes(String(email || "").toLowerCase());
 
 export const coins = (n) => `🪙 ${Math.round(n || 0).toLocaleString("pt-BR")}`;
 
@@ -36,11 +42,12 @@ export const walletRef = (uid) => doc(db, "wallets", uid);
 
 // Cria a carteira na primeira vez (com saldo inicial) e mantém nome/foto atualizados.
 export async function ensureWallet(user, profile) {
+  if (!user?.uid) return;
   const ref = walletRef(user.uid);
   const snap = await getDoc(ref);
   const info = { nickname: profile?.nickname || "—", photoURL: profile?.photoURL || "" };
   if (!snap.exists()) {
-    await setDoc(ref, { ...info, balance: START_BALANCE, lastDaily: "", wins: 0, losses: 0, biggestWin: 0, createdAt: serverTimestamp() });
+    await setDoc(ref, { ...info, balance: START_BALANCE, bank: 0, lastDaily: "", wins: 0, losses: 0, biggestWin: 0, createdAt: serverTimestamp() });
   } else {
     const d = snap.data();
     if (d.nickname !== info.nickname || d.photoURL !== info.photoURL) await updateDoc(ref, info);
@@ -87,12 +94,12 @@ export async function settle(uid, bet, payout) {
 }
 
 // Publica o resultado no canal do cassino.
-export async function postResult(user, profile, game) {
-  const net = Math.floor(game.payout - game.bet);
-  const verb = net > 0 ? `ganhou ${coins(net)}` : net < 0 ? `perdeu ${coins(-net)}` : "empatou";
+export async function postResult(user, profile, game, channelId = CASINO_CHANNEL_ID) {
+  const net = Math.floor((game.payout || 0) - (game.bet || 0));
+  const verb = game.text || (net > 0 ? `ganhou ${coins(net)}` : net < 0 ? `perdeu ${coins(-net)}` : "empatou");
   await addDoc(collection(db, "chatMessages"), {
-    channelId: CASINO_CHANNEL_ID,
-    text: `${GAME_NAMES[game.type]} — ${profile?.nickname || "Alguém"} ${verb}`,
+    channelId,
+    text: `${GAME_NAMES[game.type] || "🎲"} — ${profile?.nickname || "Alguém"} ${verb}`,
     game: { ...game, net },
     senderId: user.uid,
     senderNickname: profile?.nickname || "—",
@@ -106,6 +113,12 @@ export const GAME_NAMES = {
   coinflip: "🪙 Cara ou coroa",
   roulette: "🔫 Roleta russa",
   daily: "🎁 Bônus diário",
+  work: "💼 Trabalho",
+  rob: "🦹 Roubo",
+  pay: "💸 Pagamento",
+  loan: "🤝 Empréstimo",
+  admin: "⚙️ Administração",
+  pvp: "⚔️ Desafio",
 };
 
 /* ---------------- Blackjack ---------------- */

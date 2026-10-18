@@ -42,14 +42,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Cassino (moedas de mentira): todos veem o ranking, mas cada um só mexe na própria
-    // carteira, e o saldo nunca fica negativo.
+    // Economia/cassino (moedas de mentira). Todos veem as carteiras (ranking). Cada um cria só a
+    // própria; alterações podem vir de outra pessoa (pagar, roubar, empréstimo, prêmio de mesa),
+    // mas nenhum saldo pode ficar negativo. Apagar carteira: só o administrador.
+    function isEconomyAdmin() {
+      return myEmail() in ["muzelleitedavi@gmail.com"];
+    }
+    function validWallet() {
+      return request.resource.data.balance is number && request.resource.data.balance >= 0
+        && (!("bank" in request.resource.data) || (request.resource.data.bank is number && request.resource.data.bank >= 0));
+    }
     match /wallets/{uid} {
       allow read: if isMember();
-      allow create, update: if isMember() && request.auth.uid == uid
-        && request.resource.data.balance is number
-        && request.resource.data.balance >= 0;
-      allow delete: if false;
+      allow create: if isMember() && request.auth.uid == uid && validWallet();
+      allow update: if isMember() && validWallet();
+      allow delete: if isMember() && isEconomyAdmin();
     }
 
     // Todo o resto do app.
