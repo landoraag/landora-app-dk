@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
@@ -13,6 +13,24 @@ import { useCall } from "../../context/CallContext";
 import { InCall } from "./Calls";
 import { useVoiceMembers } from "../../lib/useVoiceMembers";
 import { notify } from "../../lib/push";
+import { CasinoBar, GameResultCard } from "../Casino";
+import { CASINO_CATEGORY_ID, CASINO_CHANNEL_ID, isCasinoChannel } from "../../lib/casino";
+
+// Garante que a categoria "Entretenimento" e o canal #cassino existam (uma vez por sessão).
+let casinoEnsured = false;
+function ensureCasinoChannel() {
+  if (casinoEnsured) return;
+  casinoEnsured = true;
+  (async () => {
+    const cat = doc(db, "channelCategories", CASINO_CATEGORY_ID);
+    if (!(await getDoc(cat)).exists()) await setDoc(cat, { name: "Entretenimento", createdAt: serverTimestamp() });
+    const ch = doc(db, "channels", CASINO_CHANNEL_ID);
+    if (!(await getDoc(ch)).exists()) await setDoc(ch, { name: "cassino", categoryId: CASINO_CATEGORY_ID, kind: "casino", createdAt: serverTimestamp() });
+  })().catch((e) => {
+    casinoEnsured = false;
+    console.error("cassino:", e);
+  });
+}
 
 // Mensagem no Firestore (chatMessages/{id}):
 //   channelId, text, images: [url], files: [{ url, name, size, type }], audio: { url, duration },
@@ -337,6 +355,8 @@ function Message({ m, mine, photo, people, myName, mentionsMe, selected, onSelec
               </button>
             </div>
           </div>
+        ) : m.game ? (
+          <GameResultCard game={m.game} />
         ) : (
           m.text && (
             <div className="chat-bubble-text">
@@ -352,7 +372,7 @@ function Message({ m, mine, photo, people, myName, mentionsMe, selected, onSelec
           <button type="button" onClick={() => onReply(m)} title="Responder" aria-label="Responder">
             <Icon name="reply" size={16} />
           </button>
-          {mine && (
+          {mine && !m.game && (
             <button type="button" onClick={() => onEdit(m)} title="Editar" aria-label="Editar">
               <Icon name="edit" size={16} />
             </button>
@@ -366,7 +386,7 @@ function Message({ m, mine, photo, people, myName, mentionsMe, selected, onSelec
           >
             <Icon name="pin" size={16} />
           </button>
-          {m.text && (
+          {m.text && !m.game && (
             <button type="button" onClick={copy} title="Copiar texto" aria-label="Copiar texto">
               <Icon name="copy" size={16} />
             </button>
@@ -554,6 +574,11 @@ export default function Chat() {
   useEffect(() => {
     if (!activeChannel && channels.length > 0) setActiveChannel(channels[0]);
   }, [channels, activeChannel]);
+
+  useEffect(() => {
+    ensureCasinoChannel();
+  }, []);
+  const inCasino = !voiceId && isCasinoChannel(activeChannel);
 
   const messages = useMemo(
     () => allMessages.filter((m) => m.channelId === activeChannel?.id),
@@ -1030,7 +1055,7 @@ export default function Chat() {
   const renderChannel = (ch) => (
     <div key={ch.id} className={"chat-channel" + (!voiceId && activeChannel?.id === ch.id ? " active" : "")}>
       <button onClick={() => openText(ch)}>
-        <Icon name="hash" size={15} />
+        {isCasinoChannel(ch) ? <span className="chat-casino-ico">🎰</span> : <Icon name="hash" size={15} />}
         <span className="chat-channel-name">{ch.name}</span>
         {unread[ch.id] && !(activeChannel?.id === ch.id && !voiceId) && (
           <span className={"chat-unread" + (unread[ch.id].mention ? " mention" : "")} title={`${unread[ch.id].count} não lida(s)`}>
@@ -1039,9 +1064,11 @@ export default function Chat() {
           </span>
         )}
       </button>
-      <button className="chat-channel-del" onClick={() => deleteChannel(ch)} title="Excluir canal" aria-label={`Excluir #${ch.name}`}>
-        <Icon name="close" size={13} />
-      </button>
+      {!isCasinoChannel(ch) && (
+        <button className="chat-channel-del" onClick={() => deleteChannel(ch)} title="Excluir canal" aria-label={`Excluir #${ch.name}`}>
+          <Icon name="close" size={13} />
+        </button>
+      )}
     </div>
   );
 
@@ -1248,6 +1275,7 @@ export default function Chat() {
           </div>
         )}
 
+        {inCasino && <CasinoBar />}
         <div ref={listRef} className="chat-messages" onClick={(e) => e.target === e.currentTarget && setSelectedId(null)}>
           {shownMessages.map((m) => (
             <Message

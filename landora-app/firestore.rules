@@ -42,9 +42,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Cassino (moedas de mentira): todos veem o ranking, mas cada um só mexe na própria
+    // carteira, e o saldo nunca fica negativo.
+    match /wallets/{uid} {
+      allow read: if isMember();
+      allow create, update: if isMember() && request.auth.uid == uid
+        && request.resource.data.balance is number
+        && request.resource.data.balance >= 0;
+      allow delete: if false;
+    }
+
     // Todo o resto do app.
     match /{collection}/{document=**} {
-      allow read, write: if collection != "config" && isMember();
+      allow read, write: if collection != "config" && collection != "wallets" && isMember();
     }
   }
 }
