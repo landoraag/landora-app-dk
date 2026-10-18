@@ -1400,3 +1400,9 @@ html, body { overscroll-behavior-y: none; }
 .chat-mention-list { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 6px; box-shadow: 0 10px 26px rgba(0,0,0,0.45); max-width: 320px; }
 .chat-mention-list button { display: flex; align-items: center; gap: 10px; background: none; border: none; color: var(--text); padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left; font-size: 0.88rem; }
 .chat-mention-list button.sel, .chat-mention-list button:hover { background: rgba(0,87,255,0.18); }
+
+/* ---------- Aviso de erro (em vez de tela preta) ---------- */
+.error-screen { display: flex; align-items: center; justify-content: center; min-height: 50vh; padding: 24px; }
+.error-card { max-width: 440px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; }
+.error-card h3 { font-size: 1.1rem; }
+.error-msg { font-size: 0.72rem; color: var(--gray-soft); background: var(--surface-2); border-radius: 8px; padding: 8px 10px; max-width: 100%; overflow-wrap: anywhere; }

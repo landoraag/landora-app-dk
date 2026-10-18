@@ -1,4 +1,6 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { lazyPage } from "../lib/lazyPage";
+import ErrorBoundary from "../components/ErrorBoundary";
 import { NavLink, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CallProvider } from "../context/CallContext";
@@ -6,15 +8,15 @@ import CallBar from "../components/CallBar";
 import UpdateBanner from "../components/UpdateBanner";
 import NotifyPrompt from "../components/NotifyPrompt";
 // Cada aba é baixada só quando for aberta (o app abre bem mais rápido, principalmente no 4G).
-const LandingPages = lazy(() => import("../components/tabs/LandingPages"));
-const Clientes = lazy(() => import("../components/tabs/Clientes"));
-const Vendas = lazy(() => import("../components/tabs/Vendas"));
-const Financeiro = lazy(() => import("../components/tabs/Financeiro"));
-const Relatorios = lazy(() => import("../components/tabs/Relatorios"));
-const Chat = lazy(() => import("../components/tabs/Chat"));
-const Perfil = lazy(() => import("../components/tabs/Perfil"));
-const Leads = lazy(() => import("../components/tabs/Leads"));
-const Tarefas = lazy(() => import("../components/tabs/Tarefas"));
+const LandingPages = lazyPage(() => import("../components/tabs/LandingPages"));
+const Clientes = lazyPage(() => import("../components/tabs/Clientes"));
+const Vendas = lazyPage(() => import("../components/tabs/Vendas"));
+const Financeiro = lazyPage(() => import("../components/tabs/Financeiro"));
+const Relatorios = lazyPage(() => import("../components/tabs/Relatorios"));
+const Chat = lazyPage(() => import("../components/tabs/Chat"));
+const Perfil = lazyPage(() => import("../components/tabs/Perfil"));
+const Leads = lazyPage(() => import("../components/tabs/Leads"));
+const Tarefas = lazyPage(() => import("../components/tabs/Tarefas"));
 import Avatar from "../components/Avatar";
 import Icon from "../components/Icons";
 
@@ -206,6 +208,7 @@ export default function Dashboard() {
         </nav>
 
         <main className="content">
+          <ErrorBoundary resetKey={location.pathname}>
           <Suspense
             fallback={
               <div className="tab-loading">
@@ -228,6 +231,7 @@ export default function Dashboard() {
             <Route path="/perfil" element={<Perfil />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
         </main>
 
         <CallBar />
