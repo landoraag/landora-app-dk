@@ -8,12 +8,15 @@
 // 3. O arquivo /firebase-messaging-sw.js (gerado no build) mostra a notificação mesmo
 //    com o app fechado.
 //
-// Configuração necessária (.env): VITE_FIREBASE_VAPID_KEY e VITE_NOTIFY_URL.
+// Configuração: VITE_NOTIFY_URL (endereço da função na Vercel). A chave VAPID já está abaixo.
 
 import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { app, auth, db } from "./firebase";
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+// Chave pública "Web Push" do projeto (Firebase → Cloud Messaging). Não é segredo: vai dentro do app.
+const VAPID_KEY =
+  import.meta.env.VITE_FIREBASE_VAPID_KEY ||
+  "BNhubiLxbeL2lijS2gUFhDa_gW5aUaKHJYxLLkGDuijVhqJFfhgKPJv-kKRxrREOoRE7JGxi-gNH-xqdg89tf_0";
 const NOTIFY_URL = import.meta.env.VITE_NOTIFY_URL;
 const TOKEN_KEY = "landora.push.token";
 
