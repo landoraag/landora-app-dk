@@ -210,6 +210,7 @@ export function CallProvider({ children }) {
   const toggleNoise = run((s) => s.toggleNoise(), "Não consegui reabrir o microfone. Verifique a permissão do navegador.");
   const setMic = (id) => run((s) => s.setMic(id), "Não consegui trocar o microfone.")();
   const setQuality = (key) => run((s) => s.setQuality(key), "Não foi possível mudar a qualidade.")();
+  const setNoiseLevel = (v) => sessionRef.current?.setNoiseLevel(v);
 
   const session = sessionRef.current;
   const peers = session ? session.snapshot() : [];
@@ -321,6 +322,7 @@ export function CallProvider({ children }) {
         stopScreen,
         toggleNoise,
         setQuality,
+        setNoiseLevel,
         setMic,
         getVolume,
         setVolume,

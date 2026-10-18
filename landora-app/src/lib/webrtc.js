@@ -52,8 +52,8 @@ const EMPTY_LOCAL = () => ({ audio: null, cam: null, screen: null, screenAudio: 
 // "detail" deixa texto/interface nítidos; troque para "motion" se for compartilhar jogo/vídeo.
 const SCREEN_CONTENT_HINT = "detail";
 
-// Força do anti-ruído (0 a 100). Mais alto corta mais barulho; perto de 100 a voz pode soar
-// um pouco "seca". 80 é um bom equilíbrio.
+// Força padrão do anti-ruído (0 a 100). Mais alto corta mais barulho; perto de 100 a voz pode
+// soar um pouco "seca". 80 é um bom equilíbrio. Cada pessoa ajusta a sua no painel ⚙️ Áudio.
 const NOISE_LEVEL = 80;
 // Tempo máximo esperando o modelo do DeepFilterNet baixar antes de passar para o RNNoise.
 const DFN_TIMEOUT_MS = 12000;
@@ -158,6 +158,8 @@ export class CallSession {
     this._dfnFailed = false; // se o DeepFilterNet não rodar neste navegador, não tenta de novo
     this._rnnFailed = false; // idem para o RNNoise
     this.noiseEngine = ""; // qual anti-ruído está ativo: "dfn", "rnnoise" ou "browser"
+    const savedLevel = Number(loadPref("noiseLevel", String(NOISE_LEVEL)));
+    this.noiseLevel = Number.isFinite(savedLevel) ? Math.min(100, Math.max(0, savedLevel)) : NOISE_LEVEL;
     this._chains = new Map(); // faixa processada -> { raw, close } (para desligar tudo direito)
     this.micId = loadPref("micId", ""); // microfone escolhido ("" = padrão do sistema)
     this.camId = loadPref("camId", ""); // câmera escolhida no computador ("" = padrão)
@@ -209,17 +211,24 @@ export class CallSession {
       ctx.close().catch(() => {});
     };
     try {
-      proc = new DeepFilterNet3Core({ sampleRate: 48000, noiseReductionLevel: NOISE_LEVEL });
+      proc = new DeepFilterNet3Core({ sampleRate: 48000, noiseReductionLevel: this.noiseLevel });
       await withTimeout(proc.initialize(), DFN_TIMEOUT_MS, "o modelo de IA demorou demais para baixar");
       const node = await proc.createAudioWorkletNode(ctx);
-      proc.setSuppressionLevel(NOISE_LEVEL);
+      proc.setSuppressionLevel(this.noiseLevel);
       const src = ctx.createMediaStreamSource(new MediaStream([rawTrack]));
       const dst = ctx.createMediaStreamDestination();
       src.connect(node).connect(dst);
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
       const track = dst.stream.getAudioTracks()[0];
       if (!track) throw new Error("o DeepFilterNet não gerou faixa de áudio");
-      return { track, close };
+      const setLevel = (v) => {
+        try {
+          proc.setSuppressionLevel(v);
+        } catch {
+          /* processador encerrado */
+        }
+      };
+      return { track, close, setLevel };
     } catch (e) {
       close();
       throw e;
@@ -230,7 +239,7 @@ export class CallSession {
   // nenhum servidor de fora — funciona em praticamente qualquer navegador moderno.
   async _startRnnoise(rawTrack) {
     const { createDenoiser } = await import("./denoise");
-    return createDenoiser(rawTrack);
+    return createDenoiser(rawTrack, this.noiseLevel);
   }
 
   // Devolve um MediaStream com a faixa de voz já pronta para enviar.
@@ -255,7 +264,7 @@ export class CallSession {
         if (this[failFlag]) continue;
         try {
           const chain = await start();
-          this._chains.set(chain.track, { raw, close: chain.close });
+          this._chains.set(chain.track, { raw, close: chain.close, setLevel: chain.setLevel });
           this.noiseEngine = name;
           return new MediaStream([chain.track]);
         } catch (e) {
@@ -272,6 +281,15 @@ export class CallSession {
       this.noiseLoading = false;
       this.onChange();
     }
+  }
+
+  // Força do anti-ruído (0 a 100), ajustada na hora, sem reabrir o microfone.
+  setNoiseLevel(value) {
+    const v = Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+    this.noiseLevel = v;
+    savePref("noiseLevel", String(v));
+    this._chains.get(this.local.audio)?.setLevel?.(v);
+    this.onChange();
   }
 
   // Para uma faixa de voz e desmonta o anti-ruído ligado a ela (se houver).

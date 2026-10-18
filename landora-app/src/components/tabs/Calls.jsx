@@ -262,7 +262,8 @@ function useAudioDevices() {
 
 // Escolha do microfone (entrada) e do alto-falante/fone (saída).
 function AudioPanel({ onClose }) {
-  const { session, outputId, setOutputId, setMic } = useCall();
+  const { session, outputId, setOutputId, setMic, setNoiseLevel } = useCall();
+  const [level, setLevel] = useState(session?.noiseLevel ?? 80);
   const { inputs, outputs } = useAudioDevices();
   const canSink = typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
   const currentMic = session?.local?.audio?.getSettings?.().deviceId || session?.micId || "";
@@ -286,6 +287,33 @@ function AudioPanel({ onClose }) {
           ))}
         </select>
       </label>
+      <div className="audio-noise">
+        <div className="audio-noise-head">
+          <span>Força do anti-ruído</span>
+          <b>{session?.noiseOn ? `${level}%` : "desligado"}</b>
+        </div>
+        <input
+          className="vm-slider"
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={level}
+          disabled={!session?.noiseOn}
+          style={{ "--p": `${level}%` }}
+          aria-label="Força do anti-ruído"
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            setLevel(v);
+            setNoiseLevel(v);
+          }}
+        />
+        <div className="audio-noise-scale">
+          <span>Suave (voz natural)</span>
+          <span>Forte (corta tudo)</span>
+        </div>
+        {!session?.noiseOn && <p className="hint">Ligue o anti-ruído no botão 🎧 para ajustar.</p>}
+      </div>
       {canSink ? (
         <label>
           Alto-falante ou fone (saída)
@@ -475,6 +503,8 @@ function InCall() {
       {error && <p className="auth-error">{error}</p>}
 
       <div className="call-stage">
+        {screens.length > 0 && (
+        <div className={"call-screens" + (screens.length > 1 ? " multi" : "")}>
         {screens.map((s) => (
           <ScreenTile
             key={s.key}
@@ -483,6 +513,8 @@ function InCall() {
             onMenu={s.uid ? (e) => openMenu(e, { uid: s.uid, name: s.nickname, hasScreen: true }) : undefined}
           />
         ))}
+        </div>
+        )}
         <div className="call-grid">
           <CamTile
             mine
