@@ -41,7 +41,9 @@ export default function Financeiro() {
 
   const settings = settingsDocs.find((s) => s.id === "finance") || { resetDay: 1 };
   const [resetDayDraft, setResetDayDraft] = useState(settings.resetDay);
-  useEffect(() => setResetDayDraft(settings.resetDay), [settings.resetDay]);
+  useEffect(() => {
+    setResetDayDraft(settings.resetDay);
+  }, [settings.resetDay]);
 
   const cycles = useMemo(() => getCyclesRange(settings.resetDay || 1, 6), [settings.resetDay, entries.length]);
   const [selectedCycleKey, setSelectedCycleKey] = useState(null);

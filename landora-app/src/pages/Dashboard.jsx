@@ -52,9 +52,15 @@ export default function Dashboard() {
   const [drawerOpen, setDrawerOpen] = useState(false); // menu ☰ do celular
 
   // Fecha o menu ☰ ao trocar de aba; Esc também fecha.
-  useEffect(() => setDrawerOpen(false), [location.pathname]);
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
   // Cada aba abre no topo.
-  useEffect(() => window.scrollTo(0, 0), [location.pathname]);
+  // (Com chaves de propósito: navegadores novos fazem scrollTo devolver uma Promise, e um efeito
+  // não pode devolver nada além de uma função; isso quebrava a tela ao trocar de aba.)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   useEffect(() => {
     if (!drawerOpen) return undefined;
     const onKey = (e) => e.key === "Escape" && setDrawerOpen(false);
