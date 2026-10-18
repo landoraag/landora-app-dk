@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { lazyPage } from "../lib/lazyPage";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -33,6 +33,18 @@ const Chat = lazyPage(PAGE_LOADERS.Chat);
 const Perfil = lazyPage(PAGE_LOADERS.Perfil);
 const Leads = lazyPage(PAGE_LOADERS.Leads);
 const Tarefas = lazyPage(PAGE_LOADERS.Tarefas);
+const PATH_LOADER = {
+  "/inicio": PAGE_LOADERS.Inicio,
+  "/landing-pages": PAGE_LOADERS.LandingPages,
+  "/clientes": PAGE_LOADERS.Clientes,
+  "/vendas": PAGE_LOADERS.Vendas,
+  "/financeiro": PAGE_LOADERS.Financeiro,
+  "/relatorios": PAGE_LOADERS.Relatorios,
+  "/chat": PAGE_LOADERS.Chat,
+  "/perfil": PAGE_LOADERS.Perfil,
+  "/leads": PAGE_LOADERS.Leads,
+  "/tarefas": PAGE_LOADERS.Tarefas,
+};
 function preloadPages() {
   for (const load of Object.values(PAGE_LOADERS)) load().catch(() => {});
 }
@@ -111,7 +123,11 @@ export default function Dashboard() {
       e.preventDefault();
       vtPending.current = true;
       try {
-        document.startViewTransition(() => {
+        document.startViewTransition(async () => {
+          // Espera a aba nova estar baixada (no máx. 1,5 s): assim a passagem já mostra a tela
+          // pronta, e não a rodinha de carregando.
+          const load = PATH_LOADER[url.pathname];
+          if (load) await Promise.race([load().catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);
           flushSync(() => {
             setDrawerOpen(false);
             navigate(url.pathname + url.search + url.hash);
@@ -150,6 +166,15 @@ export default function Dashboard() {
 
   const q = norm(query.trim());
   const items = q ? TABS.filter((t) => norm(t.label).includes(q)) : TABS;
+
+  // Destaque da aba aberta no menu lateral: um "bloco" só que desliza até o item clicado.
+  const sideNavRef = useRef(null);
+  const [indicator, setIndicator] = useState(null);
+  useLayoutEffect(() => {
+    const nav = sideNavRef.current;
+    const el = nav?.querySelector(".side-link.active");
+    setIndicator(el ? { top: el.offsetTop, height: el.offsetHeight } : null);
+  }, [location.pathname, collapsed, query]);
 
   function toggleSidebar() {
     setQuery("");
@@ -203,11 +228,17 @@ export default function Dashboard() {
             )}
 
             <div className="side-section">Menu</div>
-            <nav className="side-nav">
-              {items.map((t) => (
+            <nav className="side-nav" ref={sideNavRef}>
+              <span
+                className={"side-indicator" + (indicator ? "" : " hidden")}
+                style={indicator ? { transform: `translateY(${indicator.top}px)`, height: indicator.height } : undefined}
+                aria-hidden="true"
+              />
+              {items.map((t, i) => (
                 <NavLink
                   key={t.to}
                   to={t.to}
+                  style={{ "--i": i }}
                   title={collapsed ? t.label : undefined}
                   onClick={() => setQuery("")}
                   className={({ isActive }) => "side-link" + (isActive ? " active" : "")}
