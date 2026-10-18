@@ -8,7 +8,7 @@
 // 3. O arquivo /firebase-messaging-sw.js (gerado no build) mostra a notificação mesmo
 //    com o app fechado.
 //
-// Configuração: VITE_NOTIFY_URL (endereço da função na Vercel). A chave VAPID já está abaixo.
+// Configuração: já embutida abaixo (chave VAPID pública e endereço da função na Vercel).
 
 import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { app, auth, db } from "./firebase";
@@ -17,7 +17,8 @@ import { app, auth, db } from "./firebase";
 const VAPID_KEY =
   import.meta.env.VITE_FIREBASE_VAPID_KEY ||
   "BNhubiLxbeL2lijS2gUFhDa_gW5aUaKHJYxLLkGDuijVhqJFfhgKPJv-kKRxrREOoRE7JGxi-gNH-xqdg89tf_0";
-const NOTIFY_URL = import.meta.env.VITE_NOTIFY_URL;
+// Endereço da função que envia os avisos (Vercel).
+const NOTIFY_URL = import.meta.env.VITE_NOTIFY_URL || "https://landora-app-dk-iota.vercel.app/api/notify";
 const TOKEN_KEY = "landora.push.token";
 
 // Tipos de aviso (a chave é o que vai no Firestore e na função).

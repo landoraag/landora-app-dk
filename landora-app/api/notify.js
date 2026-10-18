@@ -179,6 +179,20 @@ function cors(req, res) {
 export default async function handler(req, res) {
   const allowed = cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
+  // Checagem de saúde: abrir este endereço no navegador mostra se a configuração está ok
+  // (sem revelar nada da chave).
+  if (req.method === "GET") {
+    let configured = false;
+    let projectId = "";
+    try {
+      const sa = serviceAccount();
+      configured = !!(sa.client_email && sa.private_key);
+      projectId = sa.project_id || "";
+    } catch {
+      configured = false;
+    }
+    return res.status(200).json({ ok: true, servico: "notificações do Landora", configurado: configured, projeto: projectId || null });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST." });
   if (!allowed) return res.status(403).json({ error: "Origem não permitida." });
 
