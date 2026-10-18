@@ -3,7 +3,8 @@ import { addDoc, collection, doc, serverTimestamp, setDoc, updateDoc } from "fir
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
-import { formatBRL, formatDate, getCycleInfo, addDays, todayISO } from "../../lib/format";
+import { formatBRL, formatDate, addDays, todayISO } from "../../lib/format";
+import { cycleTotals as calcCycleTotals, getCyclesRange } from "../../lib/finance";
 import { downloadXlsx } from "../../lib/xlsx";
 import { C, ChartCard, GlassTooltip, LegendRows, RingGauge, StatCard, axisProps, shortMoney } from "../charts/ChartKit";
 
@@ -14,22 +15,6 @@ function daysOf(cycle) {
   return out;
 }
 
-function getCyclesRange(resetDay, count = 6) {
-  const cycles = [];
-  let cursor = todayISO();
-  for (let i = 0; i < count; i++) {
-    const info = getCycleInfo(cursor, resetDay);
-    cycles.unshift(info);
-    cursor = addDays(info.start, -1);
-  }
-  return cycles;
-}
-
-function subscriptionActiveInCycle(sub, cycle) {
-  if (sub.startDate >= cycle.end) return false;
-  if (sub.deactivatedAt && sub.deactivatedAt < cycle.start) return false;
-  return true;
-}
 
 export default function Financeiro() {
   const { data: entries } = useCollection("financeEntries", "date", "desc");
@@ -76,15 +61,7 @@ export default function Financeiro() {
     await updateDoc(doc(db, "subscriptions", sub.id), { active: false, deactivatedAt: todayISO() });
   }
 
-  function cycleTotals(cycle) {
-    const cycleEntries = entries.filter((e) => e.date >= cycle.start && e.date < cycle.end);
-    const manualIn = cycleEntries.filter((e) => e.type === "entrada" && e.source === "manual").reduce((s, e) => s + e.value, 0);
-    const implant = cycleEntries.filter((e) => e.source === "implantacao").reduce((s, e) => s + e.value, 0);
-    const saidas = cycleEntries.filter((e) => e.type === "saida").reduce((s, e) => s + e.value, 0);
-    const assinaturas = subscriptions.filter((s) => subscriptionActiveInCycle(s, cycle)).reduce((s, sub) => s + sub.value, 0);
-    const entradasTotal = manualIn + implant + assinaturas;
-    return { manualIn, implant, saidas, assinaturas, entradasTotal, saldo: entradasTotal - saidas };
-  }
+  const cycleTotals = (cycle) => calcCycleTotals(cycle, entries, subscriptions);
 
   const chartData = cycles.map((c) => {
     const t = cycleTotals(c);
@@ -330,38 +307,42 @@ export default function Financeiro() {
       </ChartCard>
 
       <h3 className="section-title">Assinaturas recorrentes ativas</h3>
-      <table className="ledger-table">
-        <thead>
-          <tr><th>Cliente</th><th>Landing page</th><th className="num">Valor mensal</th><th>Desde</th><th></th></tr>
-        </thead>
-        <tbody>
-          {activeSubs.map((s) => (
-            <tr key={s.id}>
-              <td>{clientName(s.clientId)}</td>
-              <td>{pageTitle(s.landingPageId)}</td>
-              <td className="num mono">{formatBRL(s.value)}</td>
-              <td>{formatDate(s.startDate)}</td>
-              <td><button className="btn-link danger" onClick={() => deactivateSubscription(s)}>desativar</button></td>
-            </tr>
-          ))}
-          {activeSubs.length === 0 && <tr><td colSpan={5} className="muted empty">Nenhuma assinatura ativa.</td></tr>}
-        </tbody>
-      </table>
+      <div className="table-card">
+        <table className="ledger-table">
+          <thead>
+            <tr><th>Cliente</th><th>Landing page</th><th className="num">Valor mensal</th><th>Desde</th><th></th></tr>
+          </thead>
+          <tbody>
+            {activeSubs.map((s) => (
+              <tr key={s.id}>
+                <td>{clientName(s.clientId)}</td>
+                <td>{pageTitle(s.landingPageId)}</td>
+                <td className="num mono">{formatBRL(s.value)}</td>
+                <td>{formatDate(s.startDate)}</td>
+                <td><button className="btn-link danger" onClick={() => deactivateSubscription(s)}>desativar</button></td>
+              </tr>
+            ))}
+            {activeSubs.length === 0 && <tr><td colSpan={5} className="muted empty">Nenhuma assinatura ativa.</td></tr>}
+          </tbody>
+        </table>
+      </div>
 
       <h3 className="section-title">Lançamentos do ciclo</h3>
-      <table className="ledger-table">
-        <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th className="num">Valor</th></tr></thead>
-        <tbody>
-          {entries.filter((e) => e.date >= activeCycle.start && e.date < activeCycle.end).map((e) => (
-            <tr key={e.id}>
-              <td>{formatDate(e.date)}</td>
-              <td>{e.type === "entrada" ? "Entrada" : "Saída"}</td>
-              <td className="muted">{e.description || (e.source === "implantacao" ? "Implantação (automático)" : "—")}</td>
-              <td className={"num mono " + (e.type === "entrada" ? "positive" : "negative")}>{e.type === "entrada" ? "+" : "−"} {formatBRL(e.value)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="table-card">
+        <table className="ledger-table">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th className="num">Valor</th></tr></thead>
+          <tbody>
+            {entries.filter((e) => e.date >= activeCycle.start && e.date < activeCycle.end).map((e) => (
+              <tr key={e.id}>
+                <td>{formatDate(e.date)}</td>
+                <td>{e.type === "entrada" ? "Entrada" : "Saída"}</td>
+                <td className="muted">{e.description || (e.source === "implantacao" ? "Implantação (automático)" : "—")}</td>
+                <td className={"num mono " + (e.type === "entrada" ? "positive" : "negative")}>{e.type === "entrada" ? "+" : "−"} {formatBRL(e.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {showForm && (
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>

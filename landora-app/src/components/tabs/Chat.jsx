@@ -11,6 +11,7 @@ import { shrinkImage } from "../../lib/image";
 import { CAN_RECORD, useRecorder } from "../../lib/useRecorder";
 import { useCall } from "../../context/CallContext";
 import { InCall } from "./Calls";
+import { useVoiceMembers } from "../../lib/useVoiceMembers";
 import { notify } from "../../lib/push";
 
 // Mensagem no Firestore (chatMessages/{id}):
@@ -383,30 +384,6 @@ function Message({ m, mine, photo, people, myName, mentionsMe, selected, onSelec
 
 /* ---------------- Canais de voz (as calls) ---------------- */
 // Canal de voz = uma call (coleção "calls"). Fixo fica salvo; temporário some quando todos saem.
-
-// Quem está agora num canal de voz (presença das calls, atualizada a cada 15 s).
-function useVoiceMembers(callId) {
-  const [members, setMembers] = useState([]);
-  useEffect(() => {
-    if (!callId) return undefined;
-    return onSnapshot(
-      collection(db, "calls", callId, "participants"),
-      (snap) => {
-        const now = Date.now();
-        const byUid = new Map();
-        snap.docs.forEach((d) => {
-          const data = d.data();
-          if (Math.abs(now - (data.lastSeen || 0)) > 90000) return; // saiu sem avisar
-          const cur = byUid.get(data.uid);
-          if (!cur || (data.joinedAt || 0) > (cur.joinedAt || 0)) byUid.set(data.uid, { id: d.id, ...data });
-        });
-        setMembers([...byUid.values()].sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0)));
-      },
-      () => setMembers([])
-    );
-  }, [callId]);
-  return members;
-}
 
 function VoiceChannel({ c, selected, live, speakingIds, mySessionId, onOpen, onDelete }) {
   const members = useVoiceMembers(c.id);

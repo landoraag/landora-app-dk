@@ -8,6 +8,7 @@ import CallBar from "../components/CallBar";
 import UpdateBanner from "../components/UpdateBanner";
 import NotifyPrompt from "../components/NotifyPrompt";
 // Cada aba é baixada só quando for aberta (o app abre bem mais rápido, principalmente no 4G).
+const Inicio = lazyPage(() => import("../components/tabs/Inicio"));
 const LandingPages = lazyPage(() => import("../components/tabs/LandingPages"));
 const Clientes = lazyPage(() => import("../components/tabs/Clientes"));
 const Vendas = lazyPage(() => import("../components/tabs/Vendas"));
@@ -21,6 +22,7 @@ import Avatar from "../components/Avatar";
 import Icon from "../components/Icons";
 
 const TABS = [
+  { to: "/inicio", label: "Início", icon: "home" },
   { to: "/landing-pages", label: "Pages", icon: "pages" },
   { to: "/tarefas", label: "Tarefas", icon: "tarefas" },
   { to: "/leads", label: "Leads", icon: "leads" },
@@ -178,7 +180,9 @@ export default function Dashboard() {
           >
             <Icon name="menu" size={22} strokeWidth={2} />
           </button>
-          <img className="topbar-logo" src="/logomarca.png" alt="Landora" />
+          <NavLink to="/inicio" className="topbar-logo-link" aria-label="Início">
+            <img className="topbar-logo" src="/logomarca.png" alt="Landora" />
+          </NavLink>
           <span className="topbar-page">{TABS.find((t) => location.pathname.startsWith(t.to))?.label || (location.pathname.startsWith("/perfil") ? "Perfil" : "")}</span>
         </header>
 
@@ -223,7 +227,8 @@ export default function Dashboard() {
             }
           >
           <Routes>
-            <Route path="/" element={<Navigate to="/landing-pages" replace />} />
+            <Route path="/" element={<Navigate to="/inicio" replace />} />
+            <Route path="/inicio" element={<Inicio />} />
             <Route path="/landing-pages" element={<LandingPages />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/leads" element={<Leads />} />

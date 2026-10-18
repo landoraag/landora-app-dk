@@ -226,33 +226,35 @@ export default function Vendas() {
       </ChartCard>
 
       <h3 className="section-title">Histórico de vendas</h3>
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Cliente</th>
-            <th>Landing page</th>
-            <th className="num">Implantação</th>
-            <th className="num">Assinatura</th>
-            <th className="num">Valor</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {sales.map((s) => (
-            <tr key={s.id}>
-              <td>{formatDate(s.date)}</td>
-              <td>{clientOf(s.clientId)?.name || "—"}</td>
-              <td>{pageOf(s.landingPageId)?.title || "—"}</td>
-              <td className="num mono">{formatBRL(s.implantationValue)}</td>
-              <td className="num mono">{formatBRL(s.subscriptionValue)}</td>
-              <td className="num mono positive">{formatBRL((s.implantationValue || 0) + (s.subscriptionValue || 0))}</td>
-              <td><button className="btn-link" onClick={() => goToPage(s.landingPageId)}>ver página</button></td>
+      <div className="table-card">
+        <table className="ledger-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Landing page</th>
+              <th className="num">Implantação</th>
+              <th className="num">Assinatura</th>
+              <th className="num">Valor</th>
+              <th></th>
             </tr>
-          ))}
-          {sales.length === 0 && <tr><td colSpan={7} className="muted empty">Nenhuma venda registrada ainda.</td></tr>}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sales.map((s) => (
+              <tr key={s.id}>
+                <td>{formatDate(s.date)}</td>
+                <td>{clientOf(s.clientId)?.name || "—"}</td>
+                <td>{pageOf(s.landingPageId)?.title || "—"}</td>
+                <td className="num mono">{formatBRL(s.implantationValue)}</td>
+                <td className="num mono">{formatBRL(s.subscriptionValue)}</td>
+                <td className="num mono positive">{formatBRL((s.implantationValue || 0) + (s.subscriptionValue || 0))}</td>
+                <td><button className="btn-link" onClick={() => goToPage(s.landingPageId)}>ver página</button></td>
+              </tr>
+            ))}
+            {sales.length === 0 && <tr><td colSpan={7} className="muted empty">Nenhuma venda registrada ainda.</td></tr>}
+          </tbody>
+        </table>
+      </div>
 
       {showForm && (
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>

@@ -47,7 +47,7 @@ export default function Relatorios() {
   async function exportAs(type) {
     setExporting(true);
     try {
-      const canvas = await html2canvas(reportRef.current, { backgroundColor: "#0A0A0A", scale: 2 });
+      const canvas = await html2canvas(reportRef.current, { backgroundColor: "#0b0f17", scale: 2 });
       if (type === "png") {
         const link = document.createElement("a");
         link.download = `relatorio-landora-${todayISO()}.png`;
@@ -99,32 +99,51 @@ export default function Relatorios() {
           </div>
         </div>
 
-        <table className="ledger-table">
-          <tbody>
-            <tr><td>Implantações</td><td className="num mono">{formatBRL(totals.implantacao)}</td></tr>
-            <tr><td>Assinaturas (vendas do período)</td><td className="num mono">{formatBRL(totals.assinatura)}</td></tr>
-            <tr><td>Entradas manuais</td><td className="num mono">{formatBRL(totals.entradasManuais)}</td></tr>
-            <tr><td>Saídas</td><td className="num mono negative">{formatBRL(totals.saidas)}</td></tr>
-            <tr className="report-total"><td>Saldo do período</td><td className={"num mono " + (saldo >= 0 ? "positive" : "negative")}>{formatBRL(saldo)}</td></tr>
-          </tbody>
-        </table>
+        <div className="report-kpis">
+          <div className="report-kpi" style={{ "--k": "#0A9FE0" }}>
+            <span>Implantações</span>
+            <b>{formatBRL(totals.implantacao)}</b>
+          </div>
+          <div className="report-kpi" style={{ "--k": "#A855F7" }}>
+            <span>Assinaturas (vendas do período)</span>
+            <b>{formatBRL(totals.assinatura)}</b>
+          </div>
+          <div className="report-kpi" style={{ "--k": "#0057FF" }}>
+            <span>Entradas manuais</span>
+            <b>{formatBRL(totals.entradasManuais)}</b>
+          </div>
+          <div className="report-kpi" style={{ "--k": "#ef4444" }}>
+            <span>Saídas</span>
+            <b className="negative">{formatBRL(totals.saidas)}</b>
+          </div>
+        </div>
+
+        <div className="report-total-card">
+          <span>Saldo do período</span>
+          <b className={saldo >= 0 ? "positive" : "negative"}>{formatBRL(saldo)}</b>
+          <small>
+            {formatBRL(totalEntradas)} de entradas · {filteredSales.length} {filteredSales.length === 1 ? "venda" : "vendas"}
+          </small>
+        </div>
 
         <h4 className="section-title">Vendas do período</h4>
-        <table className="ledger-table">
-          <thead><tr><th>Data</th><th>Cliente</th><th>Landing page</th><th className="num">Implantação</th><th className="num">Assinatura</th></tr></thead>
-          <tbody>
-            {filteredSales.map((s) => (
-              <tr key={s.id}>
-                <td>{formatDate(s.date)}</td>
-                <td>{clientName(s.clientId)}</td>
-                <td>{pageTitle(s.landingPageId)}</td>
-                <td className="num mono">{formatBRL(s.implantationValue)}</td>
-                <td className="num mono">{formatBRL(s.subscriptionValue)}</td>
-              </tr>
-            ))}
-            {filteredSales.length === 0 && <tr><td colSpan={5} className="muted empty">Nenhuma venda no período.</td></tr>}
-          </tbody>
-        </table>
+        <div className="report-table">
+          <table className="ledger-table">
+            <thead><tr><th>Data</th><th>Cliente</th><th>Landing page</th><th className="num">Implantação</th><th className="num">Assinatura</th></tr></thead>
+            <tbody>
+              {filteredSales.map((s) => (
+                <tr key={s.id}>
+                  <td>{formatDate(s.date)}</td>
+                  <td>{clientName(s.clientId)}</td>
+                  <td>{pageTitle(s.landingPageId)}</td>
+                  <td className="num mono">{formatBRL(s.implantationValue)}</td>
+                  <td className="num mono">{formatBRL(s.subscriptionValue)}</td>
+                </tr>
+              ))}
+              {filteredSales.length === 0 && <tr><td colSpan={5} className="muted empty">Nenhuma venda no período.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
