@@ -14,9 +14,20 @@ import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/fir
 import { app, auth, db } from "./firebase";
 
 // Chave pública "Web Push" do projeto (Firebase → Cloud Messaging). Não é segredo: vai dentro do app.
-const VAPID_KEY =
-  import.meta.env.VITE_FIREBASE_VAPID_KEY ||
-  "BNhubiLxbeL2lijS2gUFhDa_gW5aUaKHJYxLLkGDuijVhqJFfhgKPJv-kKRxrREOoRE7JGxi-gNH-xqdg89tf_0";
+const PROJECT_VAPID_KEY = "BNhubiLxbeL2lijS2gUFhDa_gW5aUaKHJYxLLkGDuijVhqJFfhgKPJv-kKRxrREOoRE7JGxi-gNH-xqdg89tf_0";
+
+// Uma chave válida tem 87 caracteres (letras, números, - e _) e começa com "B".
+// Se a do .env vier com aspas, espaços ou o valor errado, ela é ignorada e vale a do projeto.
+function pickVapidKey() {
+  const fromEnv = String(import.meta.env.VITE_FIREBASE_VAPID_KEY || "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  if (/^B[A-Za-z0-9_-]{86}$/.test(fromEnv)) return fromEnv;
+  if (fromEnv) console.warn("VITE_FIREBASE_VAPID_KEY no .env não parece uma chave válida; usando a chave do projeto.");
+  return PROJECT_VAPID_KEY;
+}
+const VAPID_KEY = pickVapidKey();
 // Endereço da função que envia os avisos (Vercel).
 const NOTIFY_URL = import.meta.env.VITE_NOTIFY_URL || "https://landora-app-dk-iota.vercel.app/api/notify";
 const TOKEN_KEY = "landora.push.token";
