@@ -1353,3 +1353,12 @@ html, body { max-width: 100%; overflow-x: clip; }
   /* avisos flutuantes aparecem abaixo da barra do topo */
   .notify-prompt, .update-banner { top: calc(var(--top-bar-h) + env(safe-area-inset-top, 0px) + 8px); }
 }
+
+/* ---------- Página só rola se houver conteúdo para baixo ---------- */
+/* "100vh" no iPhone é maior que a área visível e criava um pedaço extra para rolar em toda página.
+   "100dvh" é a altura realmente visível (navegadores antigos ficam com o 100vh da regra anterior). */
+html, body, #root { height: auto; min-height: 100%; }
+.shell { min-height: 100vh; min-height: 100dvh; }
+.auth-screen { min-height: 100vh; min-height: 100dvh; }
+/* sem o efeito "elástico" de puxar a página além do fim */
+html, body { overscroll-behavior-y: none; }
