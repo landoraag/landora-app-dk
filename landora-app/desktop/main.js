@@ -58,6 +58,22 @@ function createWindow() {
     }
   });
 
+  // Miniatura: se alguém está transmitindo e você minimiza ou vai para outro programa,
+  // a transmissão continua numa janelinha por cima de tudo. Ao voltar, ela fecha.
+  // (O "true" conta como um clique seu, que o navegador exige para abrir a miniatura.)
+  const runInPage = (code) => {
+    if (win && !win.isDestroyed()) win.webContents.executeJavaScript(code, true).catch(() => {});
+  };
+  const openPip = () => {
+    if (pickerWin) return; // escolhendo a tela para compartilhar: não abre miniatura
+    runInPage("window.__landoraPip && window.__landoraPip()");
+  };
+  const closePip = () => runInPage("window.__landoraPipExit && window.__landoraPipExit()");
+  win.on("minimize", openPip);
+  win.on("blur", openPip);
+  win.on("restore", closePip);
+  win.on("focus", closePip);
+
   win.on("closed", () => {
     win = null;
   });

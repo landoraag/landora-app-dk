@@ -2,6 +2,7 @@ import { Link, NavLink, Route, Routes, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CallProvider } from "../context/CallContext";
 import CallBar from "../components/CallBar";
+import UpdateBanner from "../components/UpdateBanner";
 import LandingPages from "../components/tabs/LandingPages";
 import Clientes from "../components/tabs/Clientes";
 import Vendas from "../components/tabs/Vendas";
@@ -11,10 +12,12 @@ import Chat from "../components/tabs/Chat";
 import Calls from "../components/tabs/Calls";
 import Perfil from "../components/tabs/Perfil";
 import Leads from "../components/tabs/Leads";
+import Tarefas from "../components/tabs/Tarefas";
 import Avatar from "../components/Avatar";
 
 const TABS = [
   { to: "/landing-pages", label: "Pages", icon: "🗂️" },
+  { to: "/tarefas", label: "Tarefas", icon: "✅" },
   { to: "/leads", label: "Leads", icon: "🎯" },
   { to: "/clientes", label: "Clientes", icon: "👤" },
   { to: "/vendas", label: "Vendas", icon: "💰" },
@@ -59,6 +62,7 @@ export default function Dashboard() {
           <Routes>
             <Route path="/" element={<Navigate to="/landing-pages" replace />} />
             <Route path="/landing-pages" element={<LandingPages />} />
+            <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/vendas" element={<Vendas />} />
@@ -71,6 +75,7 @@ export default function Dashboard() {
         </main>
 
         <CallBar />
+        <UpdateBanner />
 
         <nav className="bottom-nav">
           {TABS.map((t) => (

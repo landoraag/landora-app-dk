@@ -94,6 +94,7 @@ Acesse o app publicado → **Registre-se** → crie a conta de cada sócio (nick
 | `channelCategories`    | categorias de canais do chat                                            |
 | `channels`              | canais do chat                                                          |
 | `chatMessages`         | mensagens do chat                                                       |
+| `tasks`                 | tarefas: título, importância, status, prazo e page ligada (opcional)   |
 
 ## Calls (voz, câmera e tela)
 
@@ -102,3 +103,29 @@ A mídia vai direto entre os navegadores (WebRTC) e o Firestore só faz a sinali
 (`calls/{id}/participants` e `calls/{id}/signals`). A regra atual do Firestore já cobre essas coleções.
 Funciona bem para 2 a 4 pessoas. Se alguém não conectar (rede que bloqueia conexão direta),
 configure um servidor TURN em `VITE_TURN_URL`, `VITE_TURN_USERNAME` e `VITE_TURN_CREDENTIAL`.
+
+Na call: volume de cada pessoa de 0 a 200% (botão direito ou 🔊), borda azul em quem está falando,
+virar câmera (frontal/traseira), até duas transmissões de tela ao mesmo tempo, tela cheia e
+miniatura (a transmissão continua numa janelinha quando você sai do app ou do site).
+
+## Publicar uma atualização
+
+Sempre de dentro da pasta `landora-app` (é ali que ficam o `package.json` e o `firebase.json`):
+
+```bash
+git pull
+cd landora-app
+npm install
+npm run build
+firebase deploy --only hosting
+```
+
+Quem estiver com o app aberto vê o aviso "Saiu uma versão nova" e, fora de call, o app se atualiza
+sozinho quando fica em segundo plano.
+
+## App do Windows (.exe)
+
+O app de computador abre o site online, então ele já pega as atualizações do site sem reinstalar.
+Só é preciso gerar um instalador novo quando algo dentro da pasta `desktop` mudar:
+GitHub → aba **Actions** → **Gerar app do Windows (.exe)** → **Run workflow**. Ao terminar, baixe o
+`Landora-Setup` na parte de baixo da página da execução.

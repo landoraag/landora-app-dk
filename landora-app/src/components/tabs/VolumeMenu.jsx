@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCall } from "../../context/CallContext";
 
+const MAX = 200; // volume máximo: 200% (o dobro do normal)
 const levelIcon = (pct) => (pct === 0 ? "🔇" : pct < 34 ? "🔈" : pct < 67 ? "🔉" : "🔊");
 
 function VolumeRow({ label, value, onChange }) {
@@ -24,16 +25,17 @@ function VolumeRow({ label, value, onChange }) {
       <div className="vm-body">
         <div className="vm-label">
           <span>{label}</span>
-          <b>{value}%</b>
+          <b className={value > 100 ? "vm-boost" : ""}>{value}%</b>
         </div>
         <input
           className="vm-slider"
           type="range"
           min="0"
-          max="100"
+          max={MAX}
           step="1"
           value={value}
-          style={{ "--p": `${value}%` }}
+          list="vm-marks"
+          style={{ "--p": `${(value / MAX) * 100}%` }}
           aria-label={`Volume: ${label}`}
           onChange={(e) => onChange(Number(e.target.value))}
         />
@@ -72,7 +74,7 @@ export default function VolumeMenu({ menu, onClose }) {
 
   // Mantém o menu inteiro dentro da janela.
   const width = 288;
-  const height = menu.hasScreen ? 232 : 160;
+  const height = menu.hasScreen ? 256 : 184;
   const left = Math.max(8, Math.min(menu.x, window.innerWidth - width - 8));
   const top = Math.max(8, Math.min(menu.y, window.innerHeight - height - 8));
 
@@ -96,6 +98,10 @@ export default function VolumeMenu({ menu, onClose }) {
         <div className="vm-title">{menu.name}</div>
         <VolumeRow label="Voz" value={values.voice} onChange={change("voice")} />
         {menu.hasScreen && <VolumeRow label="Transmissão de tela" value={values.screen} onChange={change("screen")} />}
+        <datalist id="vm-marks">
+          <option value="100" />
+        </datalist>
+        <p className="vm-hint">Acima de 100% o som é amplificado.</p>
         <button type="button" className="vm-reset" onClick={reset} disabled={atDefault}>
           Restaurar para 100%
         </button>

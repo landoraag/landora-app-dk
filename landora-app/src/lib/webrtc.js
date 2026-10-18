@@ -32,8 +32,22 @@ import { playSound, unlockSounds } from "./sounds";
 // Ordem fixa das faixas de cada conexão. Quem oferece cria nesta ordem e quem responde
 // recebe na mesma ordem. Assim ligar/desligar câmera ou tela só troca a faixa
 // (replaceTrack), sem renegociar nada — por isso é instantâneo.
-const SLOTS = ["audio", "cam", "screen", "screenAudio"];
-const SLOT_KIND = { audio: "audio", cam: "video", screen: "video", screenAudio: "audio" };
+// screen2/screen2Audio = segunda transmissão de tela (duas telas ou duas janelas ao mesmo tempo).
+// Ficam no fim da lista: versões antigas do app simplesmente ignoram essas faixas extras.
+const SLOTS = ["audio", "cam", "screen", "screenAudio", "screen2", "screen2Audio"];
+const SLOT_KIND = {
+  audio: "audio",
+  cam: "video",
+  screen: "video",
+  screenAudio: "audio",
+  screen2: "video",
+  screen2Audio: "audio",
+};
+const SCREEN_SLOTS = [
+  ["screen", "screenAudio"],
+  ["screen2", "screen2Audio"],
+];
+const EMPTY_LOCAL = () => ({ audio: null, cam: null, screen: null, screenAudio: null, screen2: null, screen2Audio: null });
 
 // "detail" deixa texto/interface nítidos; troque para "motion" se for compartilhar jogo/vídeo.
 const SCREEN_CONTENT_HINT = "detail";
@@ -53,6 +67,10 @@ function withTimeout(promise, ms, reason) {
     }),
   ]).finally(() => clearTimeout(timer));
 }
+
+// Celular/tablet (tela de toque): a câmera é escolhida por direção (frontal/traseira).
+const IS_TOUCH =
+  typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 
 const HEARTBEAT_MS = 15000;
 const STALE_MS = 45000;
@@ -126,7 +144,7 @@ export class CallSession {
     this.registered = false;
     this.evicted = false;
     this.peers = new Map(); // sessionId -> peer
-    this.local = { audio: null, cam: null, screen: null, screenAudio: null };
+    this.local = EMPTY_LOCAL();
     this.alive = new Map(); // sessionId -> { stamp, seenAt }
     this.unsubs = [];
     this.queue = Promise.resolve();
@@ -142,6 +160,8 @@ export class CallSession {
     this.noiseEngine = ""; // qual anti-ruído está ativo: "dfn", "rnnoise" ou "browser"
     this._chains = new Map(); // faixa processada -> { raw, close } (para desligar tudo direito)
     this.micId = loadPref("micId", ""); // microfone escolhido ("" = padrão do sistema)
+    this.camId = loadPref("camId", ""); // câmera escolhida no computador ("" = padrão)
+    this.facing = "user"; // no celular: "user" = frontal, "environment" = traseira
   }
 
   // browserNS = usar o filtro de ruído embutido do navegador (só como plano B).
@@ -295,6 +315,7 @@ export class CallSession {
       micOn: !!(this.local.audio && this.local.audio.enabled),
       camOn: !!this.local.cam,
       screenOn: !!this.local.screen,
+      screen2On: !!this.local.screen2,
     };
   }
 
@@ -340,8 +361,8 @@ export class CallSession {
     this.unsubs = [];
     for (const id of [...this.peers.keys()]) this._dropPeer(id, true);
     this._stopAudioTrack(this.local.audio);
-    ["cam", "screen", "screenAudio"].forEach((k) => this.local[k] && this.local[k].stop());
-    this.local = { audio: null, cam: null, screen: null, screenAudio: null };
+    SLOTS.filter((k) => k !== "audio").forEach((k) => this.local[k] && this.local[k].stop());
+    this.local = EMPTY_LOCAL();
 
     try {
       await deleteDoc(this._me());
@@ -437,6 +458,7 @@ export class CallSession {
         if (this.initialDone) {
           if (!!peer.info?.camOn !== !!data.camOn) playSound(data.camOn ? "camOn" : "camOff");
           if (!!peer.info?.screenOn !== !!data.screenOn) playSound(data.screenOn ? "screenOn" : "screenOff");
+          if (!!peer.info?.screen2On !== !!data.screen2On) playSound(data.screen2On ? "screenOn" : "screenOff");
         }
         peer.info = data;
         peer.seenInDoc = true;
@@ -529,10 +551,7 @@ export class CallSession {
 
   async _startOffer(peer) {
     const pc = peer.pc;
-    pc.addTransceiver("audio", { direction: "sendrecv" });
-    pc.addTransceiver("video", { direction: "sendrecv" });
-    pc.addTransceiver("video", { direction: "sendrecv" });
-    pc.addTransceiver("audio", { direction: "sendrecv" });
+    SLOTS.forEach((slot) => pc.addTransceiver(SLOT_KIND[slot], { direction: "sendrecv" }));
     await this._attachLocal(peer);
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -555,14 +574,15 @@ export class CallSession {
 
   async _tune(peer) {
     const ts = peer.pc.getTransceivers();
-    for (const slot of ["cam", "screen"]) {
+    for (const slot of ["cam", "screen", "screen2"]) {
       const sender = ts[SLOTS.indexOf(slot)]?.sender;
       if (!sender) continue;
+      const q = QUALITY[this.quality][slot === "cam" ? "cam" : "screen"];
       try {
         const params = sender.getParameters();
         if (!params.encodings || !params.encodings.length) params.encodings = [{}];
-        params.encodings[0].maxBitrate = QUALITY[this.quality][slot].bps;
-        params.encodings[0].maxFramerate = QUALITY[this.quality][slot].fps;
+        params.encodings[0].maxBitrate = q.bps;
+        params.encodings[0].maxFramerate = q.fps;
         await sender.setParameters(params);
       } catch {
         /* alguns navegadores não permitem ajustar */
@@ -685,19 +705,87 @@ export class CallSession {
       await this._setLocalTrack("cam", null);
       t.stop();
     } else {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: QUALITY[this.quality].cam.w }, height: { ideal: QUALITY[this.quality].cam.h }, frameRate: { ideal: QUALITY[this.quality].cam.fps } },
-      });
-      const t = s.getVideoTracks()[0];
-      t.contentHint = "motion";
+      const t = await this._openCam();
       await this._setLocalTrack("cam", t);
     }
     playSound(this.local.cam ? "camOn" : "camOff");
     await this._push();
   }
 
+  _camBase() {
+    const q = QUALITY[this.quality].cam;
+    return { width: { ideal: q.w }, height: { ideal: q.h }, frameRate: { ideal: q.fps } };
+  }
+
+  // Abre a câmera: no celular pela direção (frontal/traseira), no computador pela câmera escolhida.
+  async _openCam() {
+    const base = this._camBase();
+    const tries = [];
+    if (IS_TOUCH) {
+      tries.push({ ...base, facingMode: { exact: this.facing } });
+      tries.push({ ...base, facingMode: this.facing });
+    } else if (this.camId) {
+      tries.push({ ...base, deviceId: { exact: this.camId } });
+    }
+    tries.push(base);
+    let lastErr = null;
+    for (const video of tries) {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video });
+        const t = s.getVideoTracks()[0];
+        t.contentHint = "motion";
+        const f = t.getSettings?.().facingMode;
+        if (f === "user" || f === "environment") this.facing = f;
+        return t;
+      } catch (e) {
+        lastErr = e;
+        if (e?.name === "NotAllowedError") break; // sem permissão: não adianta tentar outras
+      }
+    }
+    throw lastErr;
+  }
+
+  // Vira a câmera (frontal <-> traseira no celular; próxima câmera no computador).
+  async flipCam() {
+    const old = this.local.cam;
+    if (!old) return;
+    if (IS_TOUCH) {
+      this.facing = this.facing === "environment" ? "user" : "environment";
+    } else {
+      const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+      if (cams.length < 2) throw new Error("Só existe uma câmera neste aparelho.");
+      const cur = old.getSettings?.().deviceId || this.camId;
+      const i = cams.findIndex((c) => c.deviceId === cur);
+      this.camId = cams[(i + 1) % cams.length].deviceId;
+      savePref("camId", this.camId);
+    }
+    // Muitos celulares não abrem duas câmeras ao mesmo tempo: fecha a atual antes.
+    old.stop();
+    let fresh;
+    try {
+      fresh = await this._openCam();
+    } catch (e) {
+      // Não deu: volta para a câmera anterior.
+      if (IS_TOUCH) this.facing = this.facing === "environment" ? "user" : "environment";
+      fresh = await this._openCam().catch(() => null);
+      await this._setLocalTrack("cam", fresh);
+      await this._push();
+      throw e;
+    }
+    await this._setLocalTrack("cam", fresh);
+    await this._push();
+  }
+
   async toggleScreen() {
-    if (this.local.screen) return this.stopScreen();
+    if (this.local.screen || this.local.screen2) return this.stopAllScreens();
+    return this.startScreen();
+  }
+
+  // Começa uma transmissão de tela no primeiro espaço livre (até duas ao mesmo tempo).
+  async startScreen() {
+    const pair = SCREEN_SLOTS.find(([v]) => !this.local[v]);
+    if (!pair) throw new Error("Já existem duas transmissões de tela.");
+    const [vSlot, aSlot] = pair;
     const s = await navigator.mediaDevices.getDisplayMedia({
       video: {
         width: { max: QUALITY[this.quality].screen.w },
@@ -709,9 +797,9 @@ export class CallSession {
     });
     const v = s.getVideoTracks()[0];
     v.contentHint = SCREEN_CONTENT_HINT;
-    v.onended = () => this.stopScreen(); // botão "parar compartilhamento" do próprio navegador
-    await this._setLocalTrack("screen", v);
-    await this._setLocalTrack("screenAudio", s.getAudioTracks()[0] || null);
+    v.onended = () => this.stopScreen(vSlot); // botão "parar compartilhamento" do próprio navegador
+    await this._setLocalTrack(vSlot, v);
+    await this._setLocalTrack(aSlot, s.getAudioTracks()[0] || null);
     playSound("screenOn");
     await this._push();
   }
@@ -743,8 +831,9 @@ export class CallSession {
         .applyConstraints({ width: { ideal: q.cam.w }, height: { ideal: q.cam.h }, frameRate: { ideal: q.cam.fps } })
         .catch(() => {});
     }
-    if (this.local.screen) {
-      await this.local.screen
+    for (const slot of ["screen", "screen2"]) {
+      if (!this.local[slot]) continue;
+      await this.local[slot]
         .applyConstraints({ width: { max: q.screen.w }, height: { max: q.screen.h }, frameRate: { ideal: q.screen.fps, max: q.screen.fps } })
         .catch(() => {});
     }
@@ -752,16 +841,25 @@ export class CallSession {
     this.onChange();
   }
 
-  async stopScreen() {
-    if (!this.local.screen && !this.local.screenAudio) return;
-    const v = this.local.screen;
-    const a = this.local.screenAudio;
-    await this._setLocalTrack("screen", null);
-    await this._setLocalTrack("screenAudio", null);
+  // Para uma transmissão de tela ("screen" = a primeira, "screen2" = a segunda).
+  async stopScreen(vSlot = "screen") {
+    const pair = SCREEN_SLOTS.find(([v]) => v === vSlot);
+    if (!pair) return;
+    const [, aSlot] = pair;
+    if (!this.local[vSlot] && !this.local[aSlot]) return;
+    const v = this.local[vSlot];
+    const a = this.local[aSlot];
+    await this._setLocalTrack(vSlot, null);
+    await this._setLocalTrack(aSlot, null);
     if (v) v.stop();
     if (a) a.stop();
     playSound("screenOff");
     await this._push();
+  }
+
+  async stopAllScreens() {
+    await this.stopScreen("screen2");
+    await this.stopScreen("screen");
   }
 
   // ---------- leitura para a interface ----------
@@ -771,6 +869,9 @@ export class CallSession {
       photoURL: this.photoURL,
       ...this._state(),
       camTrack: this.local.cam,
+      micTrack: this.local.audio,
+      // Câmera traseira não fica espelhada (o texto apareceria invertido).
+      camMirror: !!this.local.cam && !(IS_TOUCH && this.facing === "environment"),
     };
   }
 
@@ -783,6 +884,7 @@ export class CallSession {
       micOn: !!p.info?.micOn,
       camOn: !!p.info?.camOn,
       screenOn: !!p.info?.screenOn,
+      screen2On: !!p.info?.screen2On,
       tracks: p.tracks,
       connState: p.connState,
       since: p.since,

@@ -1,6 +1,6 @@
 {
   "name": "landora-desktop",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Landora - Painel (aplicativo para Windows)",
   "author": "Landora",
   "main": "main.js",

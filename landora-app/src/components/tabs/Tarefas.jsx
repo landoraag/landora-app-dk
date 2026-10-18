@@ -1,0 +1,131 @@
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useCollection } from "../../lib/useCollection";
+import { PRIORITIES, isOverdue, sortTasks } from "../../lib/tasks";
+import { TaskFormModal, TaskItem } from "../TaskParts";
+
+export default function Tarefas() {
+  const navigate = useNavigate();
+  const { data: tasks, loading } = useCollection("tasks", "createdAt", "desc");
+  const { data: pages } = useCollection("landingPages", "createdAt", "desc");
+
+  const [search, setSearch] = useState("");
+  const [prFilter, setPrFilter] = useState("");
+  const [pageFilter, setPageFilter] = useState("");
+  const [showDone, setShowDone] = useState(false);
+  const [modal, setModal] = useState(null); // null | "new" | tarefa
+
+  // Usa o título atual da page (se ela foi renomeada depois de criar a tarefa).
+  const pageTitles = useMemo(() => Object.fromEntries(pages.map((p) => [p.id, p.title])), [pages]);
+  const withTitles = useMemo(
+    () => tasks.map((t) => (t.pageId && pageTitles[t.pageId] ? { ...t, pageTitle: pageTitles[t.pageId] } : t)),
+    [tasks, pageTitles]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return sortTasks(
+      withTitles.filter((t) => {
+        if (prFilter && t.priority !== prFilter) return false;
+        if (pageFilter === "none" && t.pageId) return false;
+        if (pageFilter && pageFilter !== "none" && t.pageId !== pageFilter) return false;
+        if (!q) return true;
+        return [t.title, t.description, t.pageTitle].join(" ").toLowerCase().includes(q);
+      })
+    );
+  }, [withTitles, search, prFilter, pageFilter]);
+
+  const open = filtered.filter((t) => t.status !== "done");
+  const done = filtered.filter((t) => t.status === "done");
+  const lateCount = tasks.filter(isOverdue).length;
+
+  const counts = useMemo(() => {
+    const c = {};
+    tasks.forEach((t) => {
+      if (t.status !== "done") c[t.priority] = (c[t.priority] || 0) + 1;
+    });
+    return c;
+  }, [tasks]);
+
+  const goPage = (pageId) => navigate("/landing-pages", { state: { openPageId: pageId } });
+
+  return (
+    <div>
+      <header className="content-header leads-head">
+        <div>
+          <h2>Tarefas</h2>
+          <p className="muted">
+            O que falta fazer, por importância.
+            {lateCount > 0 && <span className="task-late-note"> {lateCount} atrasada{lateCount > 1 ? "s" : ""}.</span>}
+          </p>
+        </div>
+        <button className="btn btn-gradient" onClick={() => setModal("new")}>
+          + Nova tarefa
+        </button>
+      </header>
+
+      <div className="task-summary">
+        {PRIORITIES.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            className={"task-sum " + p.cls + (prFilter === p.key ? " sel" : "")}
+            onClick={() => setPrFilter(prFilter === p.key ? "" : p.key)}
+            aria-pressed={prFilter === p.key}
+          >
+            <b>{counts[p.key] || 0}</b>
+            <span>{p.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="leads-toolbar">
+        <input
+          className="leads-search"
+          placeholder="Buscar tarefa…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select value={pageFilter} onChange={(e) => setPageFilter(e.target.value)}>
+          <option value="">Todas as pages</option>
+          <option value="none">Sem page</option>
+          {pages.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.title}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="task-list">
+        {open.map((t) => (
+          <TaskItem key={t.id} task={t} onOpen={setModal} onGoPage={goPage} />
+        ))}
+        {!loading && open.length === 0 && (
+          <p className="muted empty">
+            {tasks.length === 0 ? "Nenhuma tarefa ainda. Crie a primeira em “+ Nova tarefa”." : "Nada pendente com esse filtro. 🎉"}
+          </p>
+        )}
+      </div>
+
+      {done.length > 0 && (
+        <>
+          <button type="button" className="btn-link task-done-toggle" onClick={() => setShowDone((v) => !v)}>
+            {showDone ? "▾" : "▸"} Concluídas ({done.length})
+          </button>
+          {showDone && (
+            <div className="task-list">
+              {done.map((t) => (
+                <TaskItem key={t.id} task={t} onOpen={setModal} onGoPage={goPage} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {modal && (
+        <TaskFormModal task={modal === "new" ? null : modal} pages={pages} onClose={() => setModal(null)} />
+      )}
+    </div>
+  );
+}

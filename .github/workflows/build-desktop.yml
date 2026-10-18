@@ -8,7 +8,7 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        working-directory: desktop
+        working-directory: landora-app/desktop
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,4 +22,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Landora-Setup
-          path: desktop/dist/Landora-Setup.exe
+          path: landora-app/desktop/dist/Landora-Setup.exe

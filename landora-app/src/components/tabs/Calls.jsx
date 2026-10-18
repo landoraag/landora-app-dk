@@ -9,6 +9,99 @@ import { QUALITY_OPTIONS } from "../../lib/webrtc";
 import VolumeMenu from "./VolumeMenu";
 
 const CAN_SHARE = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
+const IS_TOUCH =
+  typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+const NO_SHARE_MSG =
+  "O navegador deste aparelho não permite transmitir a tela por um site (é um bloqueio do próprio celular). " +
+  "No computador funciona normalmente.";
+
+// Tela cheia de verdade. Usa a tela cheia do navegador; no iPhone (que não deixa) usa a do vídeo;
+// e, se nada disso existir, ocupa a janela inteira.
+function useFullscreen(boxRef) {
+  const [pseudo, setPseudo] = useState(false);
+  const [native, setNative] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => {
+      const el = document.fullscreenElement || document.webkitFullscreenElement;
+      setNative(!!el && el === boxRef.current);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, [boxRef]);
+
+  useEffect(() => {
+    if (!pseudo) return undefined;
+    const onKey = (e) => e.key === "Escape" && setPseudo(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pseudo]);
+
+  const enter = (landscape) => {
+    const box = boxRef.current;
+    if (!box) return;
+    const lock = () => {
+      if (landscape && IS_TOUCH) screen.orientation?.lock?.("landscape").catch(() => {});
+    };
+    const req = box.requestFullscreen || box.webkitRequestFullscreen;
+    if (req) {
+      try {
+        const r = req.call(box, { navigationUI: "hide" });
+        if (r && r.then) r.then(lock, () => setPseudo(true));
+        else lock();
+        return;
+      } catch {
+        /* tenta o próximo jeito */
+      }
+    }
+    const v = box.querySelector("video");
+    if (v && v.webkitEnterFullscreen) {
+      try {
+        v.webkitEnterFullscreen();
+        return;
+      } catch {
+        /* tenta o próximo jeito */
+      }
+    }
+    setPseudo(true);
+  };
+
+  const exit = () => {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      screen.orientation?.unlock?.();
+    }
+    setPseudo(false);
+  };
+
+  const on = native || pseudo;
+  return { on, pseudo, toggle: (landscape) => (on ? exit() : enter(landscape)) };
+}
+
+// Quantas câmeras o aparelho tem. Antes da permissão o navegador esconde a lista,
+// por isso a contagem é refeita quando a câmera liga (refreshKey).
+function useVideoInputCount(refreshKey) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      navigator.mediaDevices
+        ?.enumerateDevices()
+        .then((list) => alive && setN(list.filter((d) => d.kind === "videoinput").length))
+        .catch(() => {});
+    load();
+    navigator.mediaDevices?.addEventListener?.("devicechange", load);
+    return () => {
+      alive = false;
+      navigator.mediaDevices?.removeEventListener?.("devicechange", load);
+    };
+  }, [refreshKey]);
+  return n;
+}
 
 function VideoTile({ track, mirror }) {
   const ref = useRef(null);
@@ -212,24 +305,46 @@ function AudioPanel({ onClose }) {
   );
 }
 
-function ScreenTile({ s, onMenu }) {
+function ScreenTile({ s, onMenu, onStop }) {
   const boxRef = useRef(null);
+  const fs = useFullscreen(boxRef);
   return (
-    <div className="call-screen" ref={boxRef} onContextMenu={onMenu}>
+    <div
+      className={"call-screen" + (fs.pseudo ? " pseudo-fs" : "")}
+      ref={boxRef}
+      onContextMenu={onMenu}
+      onDoubleClick={s.mine ? undefined : () => fs.toggle(true)}
+    >
       {s.mine ? (
-        <div className="call-screen-self">🖥️ Você está compartilhando a tela</div>
+        <div className="call-screen-self">
+          🖥️ Você está transmitindo {s.label ? `a ${s.label.toLowerCase()}` : "a tela"}
+          {onStop && (
+            <button type="button" className="btn-link danger" onClick={onStop}>
+              parar
+            </button>
+          )}
+        </div>
       ) : (
         <VideoTile track={s.track} />
       )}
-      <div className="call-tile-name">🖥️ {s.nickname}</div>
+      <div className="call-tile-name">
+        🖥️ {s.nickname}
+        {s.label ? ` · ${s.label}` : ""}
+      </div>
       {onMenu && (
         <button type="button" className="vol-btn vol-left" onClick={onMenu} title="Volume">
           🔊
         </button>
       )}
       {!s.mine && (
-        <button className="call-fs" onClick={() => boxRef.current?.requestFullscreen?.()} title="Tela cheia">
-          ⛶
+        <button
+          type="button"
+          className="call-fs"
+          onClick={() => fs.toggle(true)}
+          title={fs.on ? "Sair da tela cheia" : "Tela cheia"}
+          aria-label={fs.on ? "Sair da tela cheia" : "Tela cheia"}
+        >
+          {fs.on ? "✕" : "⛶"}
         </button>
       )}
     </div>
@@ -243,13 +358,32 @@ function connLabel(p) {
   return " · conectando…";
 }
 
-function CamTile({ nickname, photoURL, camOn, micOn, track, mine, status, onMenu }) {
+function CamTile({ nickname, photoURL, camOn, micOn, track, mine, mirror, speaking, status, onMenu }) {
+  const boxRef = useRef(null);
+  const fs = useFullscreen(boxRef);
+  const hasVideo = camOn && track;
   return (
-    <div className="call-tile" onContextMenu={onMenu}>
-      {camOn && track ? (
-        <VideoTile track={track} mirror={mine} />
+    <div
+      ref={boxRef}
+      className={"call-tile" + (speaking ? " speaking" : "") + (fs.pseudo ? " pseudo-fs" : "")}
+      onContextMenu={onMenu}
+      onDoubleClick={hasVideo ? () => fs.toggle(false) : undefined}
+    >
+      {hasVideo ? (
+        <VideoTile track={track} mirror={mirror} />
       ) : (
         <Avatar src={photoURL} name={nickname} size={72} />
+      )}
+      {hasVideo && (
+        <button
+          type="button"
+          className="call-fs"
+          onClick={() => fs.toggle(false)}
+          title={fs.on ? "Sair da tela cheia" : "Tela cheia"}
+          aria-label={fs.on ? "Sair da tela cheia" : "Tela cheia"}
+        >
+          {fs.on ? "✕" : "⛶"}
+        </button>
       )}
       <div className="call-tile-name">
         {nickname}
@@ -267,7 +401,25 @@ function CamTile({ nickname, photoURL, camOn, micOn, track, mine, status, onMenu
 }
 
 function InCall() {
-  const { active, status, error, session, toggleMic, toggleCam, toggleScreen, toggleNoise, setQuality, leave } = useCall();
+  const {
+    active,
+    status,
+    error,
+    setError,
+    session,
+    toggleMic,
+    toggleCam,
+    flipCam,
+    toggleScreen,
+    addScreen,
+    stopScreen,
+    toggleNoise,
+    setQuality,
+    leave,
+    speaking,
+    pip,
+  } = useCall();
+  const camCount = useVideoInputCount(!!session?.local?.cam);
   const [menu, setMenu] = useState(null);
   const [showAudio, setShowAudio] = useState(false);
   const [, setTick] = useState(0);
@@ -294,11 +446,19 @@ function InCall() {
     setMenu({ x: e.clientX, y: e.clientY, ...info });
   };
 
+  const both = me.screenOn && me.screen2On;
   const screens = [];
-  if (me.screenOn) screens.push({ key: "me", mine: true, nickname: me.nickname });
+  if (me.screenOn) screens.push({ key: "me", mine: true, slot: "screen", nickname: me.nickname, label: both ? "Tela 1" : "" });
+  if (me.screen2On) screens.push({ key: "me2", mine: true, slot: "screen2", nickname: me.nickname, label: me.screenOn ? "Tela 2" : "" });
   peers.forEach((p) => {
-    if (p.screenOn && p.tracks.screen) screens.push({ key: p.id, uid: p.uid, nickname: p.nickname, track: p.tracks.screen });
+    const two = p.screenOn && p.screen2On && p.tracks.screen && p.tracks.screen2;
+    if (p.screenOn && p.tracks.screen)
+      screens.push({ key: p.id, uid: p.uid, nickname: p.nickname, track: p.tracks.screen, label: two ? "Tela 1" : "" });
+    if (p.screen2On && p.tracks.screen2)
+      screens.push({ key: p.id + ":2", uid: p.uid, nickname: p.nickname, track: p.tracks.screen2, label: two ? "Tela 2" : "" });
   });
+  const sharing = me.screenOn || me.screen2On;
+  const canFlip = me.camOn && (IS_TOUCH || camCount > 1);
 
   return (
     <div className="call-shell">
@@ -319,11 +479,21 @@ function InCall() {
           <ScreenTile
             key={s.key}
             s={s}
+            onStop={s.mine ? () => stopScreen(s.slot) : undefined}
             onMenu={s.uid ? (e) => openMenu(e, { uid: s.uid, name: s.nickname, hasScreen: true }) : undefined}
           />
         ))}
         <div className="call-grid">
-          <CamTile mine nickname={me.nickname} photoURL={me.photoURL} camOn={me.camOn} micOn={me.micOn} track={me.camTrack} />
+          <CamTile
+            mine
+            nickname={me.nickname}
+            photoURL={me.photoURL}
+            camOn={me.camOn}
+            micOn={me.micOn}
+            track={me.camTrack}
+            mirror={me.camMirror}
+            speaking={speaking.has("me")}
+          />
           {peers.map((p) => (
             <CamTile
               key={p.id}
@@ -332,8 +502,9 @@ function InCall() {
               camOn={p.camOn}
               micOn={p.micOn}
               track={p.tracks.cam}
+              speaking={speaking.has(p.id)}
               status={connLabel(p)}
-              onMenu={(e) => openMenu(e, { uid: p.uid, name: p.nickname, hasScreen: p.screenOn })}
+              onMenu={(e) => openMenu(e, { uid: p.uid, name: p.nickname, hasScreen: p.screenOn || p.screen2On })}
             />
           ))}
         </div>
@@ -346,9 +517,29 @@ function InCall() {
         <button className={"ctrl-btn " + (me.camOn ? "on" : "")} onClick={toggleCam}>
           {me.camOn ? "🎥 Câmera ligada" : "🎥 Ligar câmera"}
         </button>
-        {CAN_SHARE && (
-          <button className={"ctrl-btn " + (me.screenOn ? "on" : "")} onClick={toggleScreen}>
-            {me.screenOn ? "⏹ Parar tela" : "🖥️ Compartilhar tela"}
+        {canFlip && (
+          <button className="ctrl-btn" onClick={flipCam} title="Trocar entre câmera frontal e traseira">
+            🔄 Virar câmera
+          </button>
+        )}
+        <button
+          className={"ctrl-btn " + (sharing ? "on" : "")}
+          onClick={CAN_SHARE ? toggleScreen : () => setError(NO_SHARE_MSG)}
+        >
+          {sharing ? (both ? "⏹ Parar as telas" : "⏹ Parar tela") : "🖥️ Compartilhar tela"}
+        </button>
+        {CAN_SHARE && sharing && !both && (
+          <button className="ctrl-btn" onClick={addScreen} title="Transmitir mais uma tela ou janela ao mesmo tempo">
+            ➕ Mais uma tela
+          </button>
+        )}
+        {pip.supported && pip.available && (
+          <button
+            className={"ctrl-btn " + (pip.active ? "on" : "")}
+            onClick={pip.active ? pip.exit : pip.enter}
+            title="Abre a transmissão numa janelinha que fica por cima das outras"
+          >
+            {pip.active ? "🗗 Fechar miniatura" : "🗗 Miniatura"}
           </button>
         )}
         <button className={"ctrl-btn " + (showAudio ? "on" : "")} onClick={() => setShowAudio((v) => !v)}>

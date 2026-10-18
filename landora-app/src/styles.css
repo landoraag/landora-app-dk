@@ -741,3 +741,95 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue-light)
     transition: none;
   }
 }
+
+/* ---------- Tarefas ---------- */
+.pr-urgente { --pr: #ef4444; } .pr-alta { --pr: #f59e0b; } .pr-media { --pr: #3b82f6; } .pr-baixa { --pr: #8b93a3; }
+.task-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.task-sum { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--pr); border-radius: 10px; padding: 10px 12px; color: var(--text); cursor: pointer; text-align: left; }
+.task-sum b { font-size: 1.25rem; font-family: var(--font-display); }
+.task-sum span { font-size: 0.72rem; color: var(--gray-soft); }
+.task-sum.sel { background: color-mix(in srgb, var(--pr) 16%, var(--surface)); border-color: var(--pr); }
+.task-late-note { color: var(--red); font-weight: 600; }
+.task-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 6px; }
+.task-item { display: flex; align-items: flex-start; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--pr, var(--border)); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: border-color .15s; }
+.task-item:hover { border-color: var(--blue-light); border-left-color: var(--pr, var(--blue-light)); }
+.task-item.done { opacity: 0.55; }
+.task-item.done .task-title { text-decoration: line-through; }
+.task-check { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--gray-mid); background: transparent; color: white; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.task-check:hover { border-color: var(--green); }
+.task-check.on { background: var(--green); border-color: var(--green); }
+.task-main { flex: 1; min-width: 0; }
+.task-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; overflow-wrap: anywhere; }
+.task-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.task-pr { font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; color: white; background: var(--pr); }
+.task-chip { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--border); color: var(--gray-soft); }
+.task-chip.late { color: var(--red); border-color: rgba(239,68,68,0.5); }
+.task-chip.doing { color: #fbbf24; border-color: rgba(245,158,11,0.5); }
+.task-chip.page { cursor: pointer; color: var(--blue-light); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-chip.page:hover { border-color: var(--blue-light); }
+.task-done-toggle { margin: 14px 0 0; font-size: 0.85rem; }
+.task-pr-pick { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: var(--gray-soft); }
+.task-pr-pick > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.task-pr-opt { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 8px; padding: 9px 4px; font-weight: 600; font-size: 0.8rem; cursor: pointer; border-top: 3px solid var(--pr); }
+.task-pr-opt.sel { background: var(--pr); border-color: var(--pr); color: white; }
+.task-foot { font-size: 0.75rem; }
+.task-del { margin-right: auto; }
+.lp-form input[type="date"] { color-scheme: dark; }
+.lp-tasks { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+.lp-tasks-head { display: flex; align-items: center; justify-content: space-between; }
+.task-list.compact .task-item { padding: 10px 12px; }
+.lp-badge-tasks { position: absolute; left: 8px; top: 8px; background: rgba(0,0,0,0.7); color: white; font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.lead-upload-box.cover { aspect-ratio: 16 / 9; cursor: pointer; transition: border-color .15s; }
+.lead-upload-box.cover:hover { border-color: var(--blue-light); }
+.lead-upload-box.cover img { object-fit: cover; }
+.lead-upload-box.cover em { color: var(--gray-soft); padding: 0 16px; text-align: center; }
+@media (max-width: 520px) { .two-col { grid-template-columns: 1fr; } .task-summary { gap: 6px; } .task-sum { padding: 8px; } }
+
+/* Menu de baixo com muitas abas: rola para o lado no celular. */
+.bottom-nav { overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
+.bottom-nav::-webkit-scrollbar { display: none; }
+.bottom-link { flex: 1 0 auto; min-width: 58px; }
+
+/* ---------- Call: quem está falando, tela cheia, miniatura ---------- */
+.call-tile { transition: border-color .12s, box-shadow .12s; }
+.call-tile.speaking { border-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f6, 0 0 18px rgba(59,130,246,0.45); }
+.call-tile .call-fs { right: auto; left: 8px; z-index: 2; }
+.call-fs { z-index: 2; }
+.call-screen-self { gap: 12px; flex-wrap: wrap; padding: 12px; text-align: center; }
+
+/* Tela cheia de verdade: o vídeo ocupa a tela toda, sem bordas nem limite de altura.
+   (Regras separadas: um seletor desconhecido derrubaria a regra inteira.) */
+.call-screen:fullscreen, .call-tile:fullscreen {
+  width: 100vw; height: 100vh; max-height: none; aspect-ratio: auto;
+  border: 0; border-radius: 0; background: #000; box-shadow: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.call-screen:fullscreen video, .call-tile:fullscreen video {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; object-fit: contain;
+}
+.call-screen:-webkit-full-screen, .call-tile:-webkit-full-screen {
+  width: 100vw; height: 100vh; max-height: none; aspect-ratio: auto;
+  border: 0; border-radius: 0; background: #000; box-shadow: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.call-screen:-webkit-full-screen video, .call-tile:-webkit-full-screen video {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; object-fit: contain;
+}
+/* Quando o navegador não tem tela cheia, ocupa a janela inteira. */
+.pseudo-fs {
+  position: fixed !important; inset: 0; z-index: 200; width: 100vw; height: 100dvh; max-height: none; aspect-ratio: auto;
+  border: 0 !important; border-radius: 0 !important; background: #000; box-shadow: none !important;
+  display: flex; align-items: center; justify-content: center;
+}
+.pseudo-fs video { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none !important; object-fit: contain !important; }
+.pseudo-fs .call-fs { top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 1.1rem; padding: 6px 12px; }
+
+/* Vídeo invisível que alimenta a miniatura (Picture-in-Picture). */
+.pip-source { position: fixed; right: 0; bottom: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+
+.vm-hint { margin: 2px 0 8px; font-size: 0.7rem; color: var(--gray-soft); }
+.vm-boost { color: #fbbf24; }
+
+/* ---------- Aviso de versão nova ---------- */
+.update-banner { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 120; display: flex; align-items: center; gap: 12px; background: var(--gradient); color: white; border-radius: 12px; padding: 9px 10px 9px 16px; font-size: 0.85rem; box-shadow: 0 8px 24px rgba(0,0,0,0.45); max-width: calc(100vw - 24px); }
+.update-banner button { background: white; color: var(--blue-dark); border: none; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
