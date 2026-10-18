@@ -13,7 +13,7 @@ export default function CallBar() {
     <div className="call-bar">
       <span className="call-bar-name">🔊 {active.name} · {count}</span>
       <button className="call-bar-btn" onClick={toggleMic}>{me?.micOn ? "🎤" : "🔇"}</button>
-      <Link className="call-bar-btn" to="/chat" state={{ openCall: true }}>Abrir</Link>
+      <Link className="call-bar-btn" to="/chat" state={{ openCall: true }} data-no-vt="">Abrir</Link>
       <button className="call-bar-btn leave" onClick={leave}>Sair</button>
     </div>
   );

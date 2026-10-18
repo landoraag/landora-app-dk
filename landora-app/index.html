@@ -18,61 +18,102 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      /* Intro em vídeo ao abrir o app (fica por cima enquanto o app carrega por baixo). */
-      #intro { position: fixed; inset: 0; z-index: 9999; background: #0b0d12; display: flex; align-items: center; justify-content: center; transition: opacity .45s ease; }
-      #intro.hide { opacity: 0; pointer-events: none; }
-      #intro video { width: 100%; height: 100%; object-fit: contain; background: #0b0d12; }
-      #intro-skip { position: absolute; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 8px 16px; font: 600 13px system-ui, sans-serif; cursor: pointer; opacity: 0; transition: opacity .3s; }
+      /* Intro ao abrir o app (fica por cima enquanto o app carrega por baixo). */
+      #intro { position: fixed; inset: 0; z-index: 9999; background: radial-gradient(ellipse at 50% 50%, #0d1530 0%, #0b0b0e 62%); display: flex; align-items: center; justify-content: center; transition: opacity .5s ease, transform .5s ease; overflow: hidden; }
+      #intro.hide { opacity: 0; transform: scale(1.04); pointer-events: none; }
+      #intro video { width: 100%; height: 100%; object-fit: contain; background: transparent; opacity: 0; transition: opacity .25s; }
+      #intro.playing video { opacity: 1; }
+      /* Plano B (celular que não deixa tocar vídeo sozinho): logo animado em CSS. */
+      #intro-logo { position: absolute; width: min(100vw, 860px); height: auto; opacity: 0; pointer-events: none;
+        -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 78%, transparent 100%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 78%, transparent 100%); }
+      #intro.fallback video { display: none; }
+      #intro.fallback #intro-logo { animation: intro-logo 2.6s cubic-bezier(.2,.75,.25,1) forwards; }
+      #intro.fallback::before { content: ""; position: absolute; width: 70vmin; height: 70vmin; border-radius: 50%; background: radial-gradient(circle, rgba(0,87,255,.35), transparent 65%); animation: intro-glow 2.6s ease forwards; }
+      @keyframes intro-logo {
+        0% { opacity: 0; transform: scale(.86); filter: blur(14px) brightness(1.6); }
+        35% { opacity: 1; transform: scale(1); filter: blur(0) brightness(1.25); }
+        60% { filter: blur(0) brightness(1); }
+        100% { opacity: 1; transform: scale(1.03); filter: blur(0) brightness(1); }
+      }
+      @keyframes intro-glow { 0% { opacity: 0; transform: scale(.4); } 40% { opacity: 1; transform: scale(1); } 100% { opacity: .55; transform: scale(1.15); } }
+      #intro-skip { position: absolute; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 8px 16px; font: 600 13px system-ui, sans-serif; cursor: pointer; opacity: 0; transition: opacity .3s; z-index: 2; }
       #intro.can-skip #intro-skip { opacity: 1; }
-      #intro-sound { position: absolute; left: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: none; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 8px 14px; font: 600 13px system-ui, sans-serif; cursor: pointer; }
-      #intro.muted #intro-sound { display: block; }
+      #intro-sound { position: absolute; left: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: none; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 8px 14px; font: 600 13px system-ui, sans-serif; cursor: pointer; z-index: 2; }
+      #intro.muted.playing #intro-sound { display: block; }
+      @media (prefers-reduced-motion: reduce) { #intro.fallback #intro-logo { animation: none; opacity: 1; } }
     </style>
   </head>
   <body>
-    <!-- Intro: troque o vídeo substituindo public/intro.mp4. Sem o arquivo, o app abre direto. -->
+    <!-- Intro: troque o vídeo substituindo public/intro.mp4. -->
     <div id="intro" aria-hidden="true">
-      <video id="intro-video" src="/intro.mp4" poster="/intro-poster.jpg" playsinline webkit-playsinline preload="auto"></video>
+      <!-- "muted" + "playsinline" é o que os celulares exigem para o vídeo tocar sozinho. -->
+      <video id="intro-video" src="/intro.mp4" muted autoplay playsinline webkit-playsinline preload="auto"></video>
+      <img id="intro-logo" src="/intro-logo.jpg" alt="" />
       <button id="intro-sound" type="button">🔊 Ativar som</button>
       <button id="intro-skip" type="button">Pular</button>
     </div>
     <script>
       // Toca a intro toda vez que o app abre ou a página é atualizada.
+      // Computador: tenta com som. Celular: começa sem som (é a única forma que o celular deixa
+      // tocar sozinho) com o botão "Ativar som". Se o aparelho não deixar tocar vídeo nenhum
+      // (ex.: iPhone em economia de bateria), mostra o logo animado no lugar.
       (function () {
         var intro = document.getElementById("intro");
         var video = document.getElementById("intro-video");
         var done = false;
+        var mode = "video";
         var finish = function () {
           if (done) return;
           done = true;
           intro.classList.add("hide");
           try { video.pause(); } catch (e) {}
-          setTimeout(function () { intro.remove(); }, 500);
+          setTimeout(function () { intro.remove(); }, 550);
         };
+        var fallback = function () {
+          if (done || mode !== "video") return;
+          mode = "fallback";
+          try { video.pause(); video.removeAttribute("src"); video.load(); } catch (e) {}
+          intro.classList.remove("playing");
+          intro.classList.add("fallback");
+          setTimeout(finish, 2700);
+        };
+        var started = function () {
+          if (mode !== "video") return;
+          intro.classList.add("playing");
+          intro.classList.toggle("muted", video.muted);
+        };
+        video.addEventListener("playing", started);
+        video.addEventListener("timeupdate", function () { if (video.currentTime > 0) started(); });
         video.addEventListener("ended", finish);
-        video.addEventListener("error", finish); // sem vídeo (ou formato não suportado): abre o app direto
+        video.addEventListener("error", fallback);
         document.getElementById("intro-skip").addEventListener("click", finish);
-        setTimeout(function () { intro.classList.add("can-skip"); }, 1200);
-        // Se o vídeo não começar em 6 s (internet lenta), não segura o app.
-        setTimeout(function () { if (video.currentTime === 0) finish(); }, 6000);
-        // Trava de segurança: nunca mais de 20 s.
-        setTimeout(finish, 20000);
-        // Tenta tocar com som (volume já reduzido no arquivo). Se o navegador bloquear som
-        // automático, toca sem som e mostra o botão "Ativar som".
-        video.volume = 0.8;
-        var playMuted = function () {
-          video.muted = true;
-          intro.classList.add("muted");
-          var q = video.play();
-          if (q && q.catch) q.catch(function () { finish(); });
-        };
-        try {
-          var p = video.play();
-          if (p && p.catch) p.catch(playMuted);
-        } catch (e) { playMuted(); }
         document.getElementById("intro-sound").addEventListener("click", function () {
           video.muted = false;
+          video.volume = 0.8;
           intro.classList.remove("muted");
         });
+        setTimeout(function () { intro.classList.add("can-skip"); }, 1200);
+        // Vídeo não começou em 3,5 s (bloqueado ou internet lenta): logo animado.
+        setTimeout(function () { if (!video.currentTime) fallback(); }, 3500);
+        // Trava de segurança: nunca mais de 15 s.
+        setTimeout(finish, 15000);
+
+        var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+        var playMuted = function () {
+          video.muted = true;
+          var q = video.play();
+          if (q && q.catch) q.catch(fallback);
+        };
+        try {
+          if (touch) {
+            playMuted();
+          } else {
+            video.muted = false;
+            video.volume = 0.8;
+            var p = video.play();
+            if (p && p.catch) p.catch(playMuted);
+          }
+        } catch (e) { fallback(); }
       })();
     </script>
     <div id="root"></div>

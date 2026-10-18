@@ -39,6 +39,15 @@
             "value": "public, max-age=31536000, immutable"
           }
         ]
+      },
+      {
+        "regex": "^/intro[^/]*$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
       }
     ]
   },

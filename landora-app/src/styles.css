@@ -1593,3 +1593,81 @@ html.has-pseudo-fs .bottom-nav, html.has-pseudo-fs .mobile-topbar, html.has-pseu
 @media (prefers-reduced-motion: reduce) {
   .page-anim, .page-anim * , .tab-loading { animation: none !important; }
 }
+
+/* ---------- Troca de tela com passagem suave (View Transitions) ----------
+   A tela antiga sai rápido (some e sobe de leve, desfocando) e a nova entra subindo.
+   Menus fixos (lateral, topo, de baixo) ficam parados durante a troca. */
+html { background-color: var(--black, #0a0a0a); }
+.sidebar { view-transition-name: app-sidebar; }
+.mobile-topbar { view-transition-name: app-topbar; }
+.bottom-nav { view-transition-name: app-bottomnav; }
+::view-transition-group(app-sidebar), ::view-transition-group(app-topbar), ::view-transition-group(app-bottomnav) { animation-duration: .25s; }
+::view-transition-old(root) { animation: vt-out .2s cubic-bezier(.4,0,1,1) both; }
+::view-transition-new(root) { animation: vt-in .42s cubic-bezier(.16,.84,.3,1) .05s both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-8px) scale(.985); filter: blur(3px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(18px) scale(.99); filter: blur(4px); } }
+.page-anim.vt-nav { animation: none; }
+
+/* Plano B (navegador sem View Transitions): entrada mais marcada. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(18px) scale(.99); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+.page-anim { animation: page-in .45s cubic-bezier(.16,.84,.3,1) backwards; }
+.page-anim.no-slide { animation: page-fade .32s ease backwards; }
+
+/* ---------- Menu ☰ do celular: abre deslizando com "mola", fundo desfocado e itens em sequência ---------- */
+@media (max-width: 899px) {
+  .drawer-backdrop {
+    background: rgba(3,6,14,0.55);
+    backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
+    transition: opacity .32s ease, backdrop-filter .32s ease, -webkit-backdrop-filter .32s ease;
+  }
+  .drawer-backdrop.open { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .drawer {
+    transform: translateX(-104%);
+    transition: transform .3s cubic-bezier(.55,0,.85,.35), box-shadow .3s;
+    background: linear-gradient(180deg, #111829 0%, #0d111a 55%, #0b0e15 100%);
+    border-right: 1px solid rgba(0,87,255,0.25);
+    border-radius: 0 22px 22px 0;
+    box-shadow: none;
+    /* começa um pouco antes da borda: o "quique" da mola não mostra um vão do lado esquerdo */
+    left: -24px; width: calc(min(300px, 84vw) + 24px); padding-left: 38px;
+  }
+  .drawer::after { /* fio de luz azul na borda */
+    content: ""; position: absolute; top: 12%; bottom: 12%; right: -1px; width: 2px; border-radius: 2px;
+    background: linear-gradient(180deg, transparent, var(--blue-light, #3b82f6), transparent);
+    opacity: 0; transition: opacity .4s .2s;
+  }
+  .drawer.open {
+    transform: translateX(0);
+    transition: transform .5s cubic-bezier(.22,1.12,.36,1), box-shadow .5s;
+    box-shadow: 18px 0 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,87,255,0.12);
+  }
+  .drawer.open::after { opacity: .9; }
+
+  /* itens entram um depois do outro */
+  .drawer-head, .drawer-section, .drawer-link, .drawer-foot {
+    opacity: 0; transform: translateX(-22px);
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .drawer.open .drawer-head, .drawer.open .drawer-section, .drawer.open .drawer-link, .drawer.open .drawer-foot {
+    opacity: 1; transform: none;
+    transition: opacity .38s ease, transform .5s cubic-bezier(.22,1.2,.36,1), background .15s;
+    transition-delay: calc(90ms + var(--i, 0) * 38ms);
+  }
+  .drawer.open .drawer-head { transition-delay: 60ms; }
+  .drawer-link { position: relative; }
+  .drawer-link.active { background: linear-gradient(90deg, rgba(0,87,255,0.28), rgba(0,87,255,0.06)); }
+  .drawer-link.active::before { content: ""; position: absolute; left: 0; top: 22%; bottom: 22%; width: 3px; border-radius: 3px; background: var(--blue-light, #3b82f6); box-shadow: 0 0 10px var(--blue-light, #3b82f6); }
+  .drawer-close { transition: transform .35s cubic-bezier(.22,1.2,.36,1), background .15s; }
+  .drawer.open .drawer-close { transform: rotate(90deg); transition-delay: .15s; }
+
+  /* botão ☰: afunda ao tocar */
+  .topbar-menu { transition: transform .15s ease, background .15s; }
+  .topbar-menu:active { transform: scale(.88); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer, .drawer.open, .drawer *, .drawer-backdrop { transition-duration: .01ms !important; transition-delay: 0s !important; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+}

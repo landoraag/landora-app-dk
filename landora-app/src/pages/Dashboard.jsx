@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { lazyPage } from "../lib/lazyPage";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { NavLink, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -7,17 +8,37 @@ import { CallProvider } from "../context/CallContext";
 import CallBar from "../components/CallBar";
 import UpdateBanner from "../components/UpdateBanner";
 import NotifyPrompt from "../components/NotifyPrompt";
-// Cada aba é baixada só quando for aberta (o app abre bem mais rápido, principalmente no 4G).
-const Inicio = lazyPage(() => import("../components/tabs/Inicio"));
-const LandingPages = lazyPage(() => import("../components/tabs/LandingPages"));
-const Clientes = lazyPage(() => import("../components/tabs/Clientes"));
-const Vendas = lazyPage(() => import("../components/tabs/Vendas"));
-const Financeiro = lazyPage(() => import("../components/tabs/Financeiro"));
-const Relatorios = lazyPage(() => import("../components/tabs/Relatorios"));
-const Chat = lazyPage(() => import("../components/tabs/Chat"));
-const Perfil = lazyPage(() => import("../components/tabs/Perfil"));
-const Leads = lazyPage(() => import("../components/tabs/Leads"));
-const Tarefas = lazyPage(() => import("../components/tabs/Tarefas"));
+// Cada aba é baixada à parte (o app abre bem mais rápido, principalmente no 4G). Logo depois
+// que o app abre, as outras abas são baixadas em segundo plano, para a troca de tela ser
+// instantânea (sem a rodinha de carregando no meio da animação).
+const PAGE_LOADERS = {
+  Inicio: () => import("../components/tabs/Inicio"),
+  LandingPages: () => import("../components/tabs/LandingPages"),
+  Clientes: () => import("../components/tabs/Clientes"),
+  Vendas: () => import("../components/tabs/Vendas"),
+  Financeiro: () => import("../components/tabs/Financeiro"),
+  Relatorios: () => import("../components/tabs/Relatorios"),
+  Chat: () => import("../components/tabs/Chat"),
+  Perfil: () => import("../components/tabs/Perfil"),
+  Leads: () => import("../components/tabs/Leads"),
+  Tarefas: () => import("../components/tabs/Tarefas"),
+};
+const Inicio = lazyPage(PAGE_LOADERS.Inicio);
+const LandingPages = lazyPage(PAGE_LOADERS.LandingPages);
+const Clientes = lazyPage(PAGE_LOADERS.Clientes);
+const Vendas = lazyPage(PAGE_LOADERS.Vendas);
+const Financeiro = lazyPage(PAGE_LOADERS.Financeiro);
+const Relatorios = lazyPage(PAGE_LOADERS.Relatorios);
+const Chat = lazyPage(PAGE_LOADERS.Chat);
+const Perfil = lazyPage(PAGE_LOADERS.Perfil);
+const Leads = lazyPage(PAGE_LOADERS.Leads);
+const Tarefas = lazyPage(PAGE_LOADERS.Tarefas);
+function preloadPages() {
+  for (const load of Object.values(PAGE_LOADERS)) load().catch(() => {});
+}
+const CAN_VT = typeof document !== "undefined" && typeof document.startViewTransition === "function";
+const REDUCED_MOTION =
+  typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 import Avatar from "../components/Avatar";
 import Icon from "../components/Icons";
 
@@ -69,6 +90,47 @@ export default function Dashboard() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [drawerOpen]);
+  // Baixa as outras abas em segundo plano, 2,5 s depois de abrir.
+  useEffect(() => {
+    const t = setTimeout(preloadPages, 2500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Troca de tela animada: o navegador "fotografa" a tela atual e faz a passagem suave para a
+  // nova (View Transitions). Navegadores antigos usam a animação de entrada simples (.page-anim).
+  const vtPending = useRef(false);
+  useEffect(() => {
+    if (!CAN_VT || REDUCED_MOTION) return undefined;
+    const onClick = (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target.closest?.("a[href]");
+      if (!a || a.target === "_blank" || a.hasAttribute("download") || a.hasAttribute("data-no-vt")) return;
+      const url = new URL(a.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname) return; // mesma tela: sem animação
+      e.preventDefault();
+      vtPending.current = true;
+      try {
+        document.startViewTransition(() => {
+          flushSync(() => {
+            setDrawerOpen(false);
+            navigate(url.pathname + url.search + url.hash);
+          });
+        });
+      } catch {
+        vtPending.current = false;
+        navigate(url.pathname + url.search + url.hash);
+      }
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [navigate]);
+  // Se a troca veio com a passagem suave, a tela nova não precisa da animação de entrada extra.
+  const enterClass = useMemo(() => (vtPending.current ? " vt-nav" : ""), [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    vtPending.current = false;
+  }, [location.key]);
+
   const drawerHasActive = MOBILE_DRAWER.some((t) => location.pathname.startsWith(t.to));
   const [query, setQuery] = useState("");
   const searchRef = useRef(null);
@@ -194,11 +256,12 @@ export default function Dashboard() {
               <Icon name="close" size={20} />
             </button>
           </div>
-          <div className="drawer-section">Menu</div>
-          {MOBILE_DRAWER.map((t) => (
+          <div className="drawer-section" style={{ "--i": 0 }}>Menu</div>
+          {MOBILE_DRAWER.map((t, i) => (
             <NavLink
               key={t.to}
               to={t.to}
+              style={{ "--i": i + 1 }}
               tabIndex={drawerOpen ? 0 : -1}
               className={({ isActive }) => "drawer-link" + (isActive ? " active" : "")}
             >
@@ -206,7 +269,7 @@ export default function Dashboard() {
               <span>{t.label}</span>
             </NavLink>
           ))}
-          <div className="drawer-foot">
+          <div className="drawer-foot" style={{ "--i": MOBILE_DRAWER.length + 1 }}>
             <NavLink to="/perfil" tabIndex={drawerOpen ? 0 : -1} className="drawer-user">
               <Avatar src={profile?.photoURL} name={profile?.nickname} size={34} />
               <span>{profile?.nickname}</span>
@@ -227,7 +290,7 @@ export default function Dashboard() {
             }
           >
           {/* A chave muda a cada aba: a animação de entrada roda de novo em toda troca de tela. */}
-          <div key={location.pathname} className={"page-anim" + (location.pathname.startsWith("/chat") ? " no-slide" : "")}>
+          <div key={location.pathname} className={"page-anim" + (location.pathname.startsWith("/chat") ? " no-slide" : "") + enterClass}>
           <Routes>
             <Route path="/" element={<Navigate to="/inicio" replace />} />
             <Route path="/inicio" element={<Inicio />} />
