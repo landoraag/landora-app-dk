@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCollection } from "../../lib/useCollection";
 import { PRIORITIES, buildTasksExport, isOverdue, sortTasks } from "../../lib/tasks";
+import { exportTasksPDF, exportTasksPNG } from "../../lib/tasksExport";
 import { TaskFormModal, TaskItem } from "../TaskParts";
 
 export default function Tarefas() {
@@ -48,21 +49,31 @@ export default function Tarefas() {
   }, [tasks]);
 
   const [exportMsg, setExportMsg] = useState("");
-  const exportTasks = async () => {
-    const text = buildTasksExport(withTitles);
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `alteracoes-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    try {
-      await navigator.clipboard.writeText(text);
-      setExportMsg("Baixado e copiado!");
-    } catch {
-      setExportMsg("Arquivo baixado!");
-    }
+  const [exportOpen, setExportOpen] = useState(false);
+  const flash = (msg) => {
+    setExportMsg(msg);
     setTimeout(() => setExportMsg(""), 2500);
+  };
+  const exportAs = async (format) => {
+    setExportOpen(false);
+    try {
+      if (format === "pdf") return exportTasksPDF(withTitles), flash("PDF baixado!");
+      if (format === "png") return exportTasksPNG(withTitles), flash("Imagem baixada!");
+      const text = buildTasksExport(withTitles);
+      if (format === "copy") {
+        await navigator.clipboard.writeText(text);
+        return flash("Copiado!");
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+      a.download = `alteracoes-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      flash("Arquivo baixado!");
+    } catch (e) {
+      console.error(e);
+      flash("Não deu para exportar.");
+    }
   };
 
   const goPage = (pageId) => navigate("/landing-pages", { state: { openPageId: pageId } });
@@ -79,9 +90,40 @@ export default function Tarefas() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {exportMsg && <span className="muted">{exportMsg}</span>}
-          <button className="btn" onClick={exportTasks} title="Baixa um .txt com as alterações abertas, por importância">
-            ⤓ Exportar alterações
-          </button>
+          <div style={{ position: "relative" }}>
+            <button className="btn" onClick={() => setExportOpen((v) => !v)} title="Alterações abertas, por importância">
+              ⤓ Exportar alterações ▾
+            </button>
+            {exportOpen && (
+              <>
+                <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => setExportOpen(false)} />
+                <div
+                  style={{
+                    position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 41, minWidth: 180,
+                    background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
+                    boxShadow: "0 8px 24px rgba(0,0,0,.18)", padding: 4, display: "flex", flexDirection: "column",
+                  }}
+                >
+                  {[
+                    ["pdf", "📄 PDF"],
+                    ["png", "🖼️ Imagem (PNG)"],
+                    ["txt", "📝 Texto (.txt)"],
+                    ["copy", "📋 Copiar texto"],
+                  ].map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className="btn-link"
+                      style={{ textAlign: "left", padding: "8px 10px", borderRadius: 6, color: "inherit" }}
+                      onClick={() => exportAs(k)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button className="btn btn-gradient" onClick={() => setModal("new")}>
             + Nova tarefa
           </button>

@@ -50,24 +50,38 @@ export function sortTasks(list) {
   });
 }
 
-// Monta o texto "Alterações a serem feitas", agrupado por importância
-// (Urgente → Alta → Média → Baixa) e numerado dentro de cada grupo.
-// Só entram tarefas abertas (A fazer / Fazendo).
-export function buildTasksExport(list) {
+// Agrupa as tarefas abertas (A fazer / Fazendo) por importância
+// (Urgente → Alta → Média → Baixa); grupos vazios ficam de fora.
+export function groupTasksForExport(list) {
   const open = sortTasks(list.filter((t) => t.status !== "done"));
-  const lines = ["Alterações a serem feitas:"];
-  PRIORITIES.forEach((p) => {
-    const group = open.filter((t) => (PRIORITY_RANK[t.priority] !== undefined ? t.priority : "media") === p.key);
-    if (!group.length) return;
-    lines.push("", p.label);
-    group.forEach((t, i) => {
-      const extra = [t.pageTitle && `page: ${t.pageTitle}`, t.dueDate && `prazo: ${t.dueDate.split("-").reverse().join("/")}`]
-        .filter(Boolean)
-        .join(" · ");
-      lines.push(`${String(i + 1).padStart(2, "0")} - ${t.title}${extra ? ` (${extra})` : ""}`);
-      if (t.description?.trim()) lines.push(`     ${t.description.trim().replace(/\n+/g, " ")}`);
+  return PRIORITIES.map((p) => ({
+    ...p,
+    items: open
+      .filter((t) => (PRIORITY_RANK[t.priority] !== undefined ? t.priority : "media") === p.key)
+      .map((t) => ({
+        title: t.title || "(sem título)",
+        description: (t.description || "").trim().replace(/\n+/g, " "),
+        extra: [t.pageTitle && `page: ${t.pageTitle}`, t.dueDate && `prazo: ${t.dueDate.split("-").reverse().join("/")}`]
+          .filter(Boolean)
+          .join(" · "),
+      })),
+  })).filter((g) => g.items.length);
+}
+
+export const EXPORT_TITLE = "Alterações a serem feitas:";
+export const exportNumber = (i) => String(i + 1).padStart(2, "0");
+
+// Texto puro (.txt / área de transferência).
+export function buildTasksExport(list) {
+  const lines = [EXPORT_TITLE];
+  const groups = groupTasksForExport(list);
+  groups.forEach((g) => {
+    lines.push("", g.label);
+    g.items.forEach((t, i) => {
+      lines.push(`${exportNumber(i)} - ${t.title}${t.extra ? ` (${t.extra})` : ""}`);
+      if (t.description) lines.push(`     ${t.description}`);
     });
   });
-  if (lines.length === 1) lines.push("", "Nenhuma alteração pendente.");
+  if (!groups.length) lines.push("", "Nenhuma alteração pendente.");
   return lines.join("\n") + "\n";
 }
