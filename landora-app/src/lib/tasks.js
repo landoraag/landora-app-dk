@@ -50,22 +50,36 @@ export function sortTasks(list) {
   });
 }
 
-// Agrupa as tarefas abertas (A fazer / Fazendo) por importância
-// (Urgente → Alta → Média → Baixa); grupos vazios ficam de fora.
+// Agrupa as tarefas abertas (A fazer / Fazendo) por page e, dentro de cada page,
+// por importância (Urgente → Alta → Média → Baixa). Grupos vazios ficam de fora.
+// Pages com alteração mais importante vêm primeiro (empate: mais alterações, depois nome);
+// tarefas sem page vão por último, em "Geral".
+export const NO_PAGE_LABEL = "Geral (sem page)";
 export function groupTasksForExport(list) {
   const open = sortTasks(list.filter((t) => t.status !== "done"));
-  return PRIORITIES.map((p) => ({
-    ...p,
-    items: open
-      .filter((t) => (PRIORITY_RANK[t.priority] !== undefined ? t.priority : "media") === p.key)
-      .map((t) => ({
-        title: t.title || "(sem título)",
-        description: (t.description || "").trim().replace(/\n+/g, " "),
-        extra: [t.pageTitle && `page: ${t.pageTitle}`, t.dueDate && `prazo: ${t.dueDate.split("-").reverse().join("/")}`]
-          .filter(Boolean)
-          .join(" · "),
-      })),
-  })).filter((g) => g.items.length);
+  const byPage = new Map();
+  open.forEach((t) => {
+    const key = t.pageId || "";
+    if (!byPage.has(key)) byPage.set(key, { page: t.pageTitle || (key ? "Page sem nome" : NO_PAGE_LABEL), noPage: !key, tasks: [] });
+    byPage.get(key).tasks.push(t);
+  });
+  return [...byPage.values()]
+    .map((pg) => ({ ...pg, top: Math.min(...pg.tasks.map((t) => PRIORITY_RANK[t.priority] ?? 2)) }))
+    .sort((a, b) => a.noPage - b.noPage || a.top - b.top || b.tasks.length - a.tasks.length || a.page.localeCompare(b.page, "pt-BR"))
+    .map(({ page, tasks }) => ({
+      page,
+      count: tasks.length,
+      groups: PRIORITIES.map((p) => ({
+        ...p,
+        items: tasks
+          .filter((t) => (PRIORITY_RANK[t.priority] !== undefined ? t.priority : "media") === p.key)
+          .map((t) => ({
+            title: t.title || "(sem título)",
+            description: (t.description || "").trim().replace(/\n+/g, " "),
+            extra: t.dueDate ? `prazo: ${t.dueDate.split("-").reverse().join("/")}` : "",
+          })),
+      })).filter((g) => g.items.length),
+    }));
 }
 
 export const EXPORT_TITLE = "Alterações a serem feitas:";
@@ -74,14 +88,17 @@ export const exportNumber = (i) => String(i + 1).padStart(2, "0");
 // Texto puro (.txt / área de transferência).
 export function buildTasksExport(list) {
   const lines = [EXPORT_TITLE];
-  const groups = groupTasksForExport(list);
-  groups.forEach((g) => {
-    lines.push("", g.label);
-    g.items.forEach((t, i) => {
-      lines.push(`${exportNumber(i)} - ${t.title}${t.extra ? ` (${t.extra})` : ""}`);
-      if (t.description) lines.push(`     ${t.description}`);
+  const pages = groupTasksForExport(list);
+  pages.forEach((pg) => {
+    lines.push("", `===== ${pg.page.toUpperCase()} =====`);
+    pg.groups.forEach((g) => {
+      lines.push("", g.label);
+      g.items.forEach((t, i) => {
+        lines.push(`${exportNumber(i)} - ${t.title}${t.extra ? ` (${t.extra})` : ""}`);
+        if (t.description) lines.push(`     ${t.description}`);
+      });
     });
   });
-  if (!groups.length) lines.push("", "Nenhuma alteração pendente.");
+  if (!pages.length) lines.push("", "Nenhuma alteração pendente.");
   return lines.join("\n") + "\n";
 }
