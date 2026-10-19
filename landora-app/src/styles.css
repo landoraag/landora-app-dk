@@ -1820,7 +1820,7 @@ html { background-color: var(--black, #0a0a0a); }
 }
 
 /* janela do jogo */
-.casino-backdrop { z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.casino-backdrop { z-index: 9500; overscroll-behavior: contain; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .casino-modal {
   position: relative; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto;
   background: linear-gradient(180deg, #121a2c, #0c111c); border: 1px solid rgba(255,255,255,0.09); border-radius: 22px;
@@ -1837,7 +1837,7 @@ html { background-color: var(--black, #0a0a0a); }
 .casino-modal .modal-close { position: absolute; top: 12px; right: 12px; }
 @media (max-width: 899px) {
   .casino-backdrop { align-items: flex-end; padding: 0; }
-  .casino-modal { width: 100%; border-radius: 22px 22px 0 0; max-height: 92dvh; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); animation: casino-sheet .4s cubic-bezier(.22,1.1,.36,1); }
+  .casino-modal { width: 100%; border-radius: 22px 22px 0 0; max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 12px); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); animation: casino-sheet .4s cubic-bezier(.22,1.1,.36,1); }
   @keyframes casino-sheet { from { transform: translateY(100%); } to { transform: none; } }
 }
 

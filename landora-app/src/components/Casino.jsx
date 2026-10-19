@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { onSnapshot } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { useCollection } from "../lib/useCollection";
@@ -669,6 +670,7 @@ export function CasinoBar() {
       </div>
 
       {open && (
+        createPortal(
         <div className="modal-backdrop casino-backdrop" onClick={() => setOpen(null)}>
           <div className={"casino-modal" + (game ? " g-" + game.id : "")} onClick={(e) => e.stopPropagation()}>
             <header className="casino-modal-head">
@@ -687,7 +689,9 @@ export function CasinoBar() {
               <Ranking />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
+        )
       )}
     </div>
   );

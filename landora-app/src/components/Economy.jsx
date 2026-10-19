@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { addDoc, collection, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
@@ -587,6 +588,7 @@ export function EconomyBar() {
       </div>
 
       {open && (
+        createPortal(
         <div className="modal-backdrop casino-backdrop" onClick={() => setOpen(null)}>
           <div className="casino-modal eco-modal" onClick={(e) => e.stopPropagation()}>
             <header className="casino-modal-head">
@@ -599,7 +601,9 @@ export function EconomyBar() {
             {msg && open !== "rules" && <div className={"eco-msg" + (msg.bad ? " bad" : "")}>{msg.text}</div>}
             {MODALS[open][1]}
           </div>
-        </div>
+        </div>,
+        document.body
+        )
       )}
     </div>
   );

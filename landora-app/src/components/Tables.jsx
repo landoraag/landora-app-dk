@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
@@ -289,6 +290,7 @@ function TableModal({ t, me, onClose }) {
   };
   const props = { t, me, busy, act };
   return (
+    createPortal(
     <div className="modal-backdrop casino-backdrop" onClick={onClose}>
       <div className={"casino-modal pvp g-" + t.game} onClick={(e) => e.stopPropagation()}>
         <header className="casino-modal-head">
@@ -317,7 +319,9 @@ function TableModal({ t, me, onClose }) {
           );
         })()}
       </div>
-    </div>
+    </div>,
+    document.body
+  )
   );
 }
 
