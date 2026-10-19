@@ -2,7 +2,17 @@
 import jsPDF from "jspdf";
 import { EXPORT_TITLE, exportNumber, groupTasksForExport } from "./tasks";
 
-const COLORS = { urgente: "#dc2626", alta: "#ea580c", media: "#ca8a04", baixa: "#16a34a" };
+// Padrão visual da Landora: fundo preto, detalhes em azul, texto em cinza.
+const THEME = {
+  bg: "#0A0A0A",
+  card: "#111827",
+  border: "#232b3a",
+  blue: "#0057FF",
+  blueDark: "#1E3A8A",
+  title: "#f4f6fb",
+  text: "#d1d5db",
+  muted: "#8b93a3",
+};
 const fileDate = () => new Date().toLocaleDateString("pt-BR").replace(/\//g, "-");
 const today = () => new Date().toLocaleDateString("pt-BR");
 
@@ -19,28 +29,36 @@ export function exportTasksPDF(list) {
   const W = pdf.internal.pageSize.getWidth();
   const H = pdf.internal.pageSize.getHeight();
   const M = 18;
+  const paintPage = () => {
+    pdf.setFillColor(THEME.bg).rect(0, 0, W, H, "F");
+    pdf.setFillColor(THEME.blue).rect(0, 0, W, 1.6, "F");
+  };
+  paintPage();
   let y = M;
   const need = (h) => {
     if (y + h > H - M) {
       pdf.addPage();
+      paintPage();
       y = M;
     }
   };
 
-  pdf.setFont("helvetica", "bold").setFontSize(18).setTextColor(20);
+  pdf.setFont("helvetica", "bold").setFontSize(18).setTextColor(THEME.title);
   pdf.text(EXPORT_TITLE, M, y + 4);
-  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(120);
+  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(THEME.muted);
   pdf.text(`Gerado em ${today()}`, W - M, y + 4, { align: "right" });
-  y += 14;
+  y += 8;
+  pdf.setDrawColor(THEME.border).setLineWidth(0.3).line(M, y, W - M, y);
+  y += 10;
 
   const groups = groupTasksForExport(list);
   if (!groups.length) {
-    pdf.setFontSize(12).setTextColor(80).text("Nenhuma alteração pendente.", M, y);
+    pdf.setFontSize(12).setTextColor(THEME.muted).text("Nenhuma alteração pendente.", M, y);
   }
   groups.forEach((g) => {
     need(16);
-    pdf.setFillColor(COLORS[g.key]).rect(M, y - 4.5, 3, 6, "F");
-    pdf.setFont("helvetica", "bold").setFontSize(14).setTextColor(COLORS[g.key]);
+    pdf.setFillColor(THEME.blue).rect(M, y - 4.5, 3, 6, "F");
+    pdf.setFont("helvetica", "bold").setFontSize(14).setTextColor(THEME.blue);
     pdf.text(`${g.label} (${g.items.length})`, M + 6, y);
     y += 8;
     g.items.forEach((t, i) => {
@@ -50,11 +68,11 @@ export function exportTasksPDF(list) {
       pdf.setFont("helvetica", "normal").setFontSize(9.5);
       const subLines = sub ? pdf.splitTextToSize(sub, W - 2 * M - 14) : [];
       need(titleLines.length * 5 + subLines.length * 4.3 + 3);
-      pdf.setFont("helvetica", "bold").setFontSize(11).setTextColor(30);
+      pdf.setFont("helvetica", "bold").setFontSize(11).setTextColor(THEME.text);
       pdf.text(titleLines, M + 4, y);
       y += titleLines.length * 5;
       if (subLines.length) {
-        pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(110);
+        pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(THEME.muted);
         pdf.text(subLines, M + 14, y - 0.5);
         y += subLines.length * 4.3;
       }
@@ -96,7 +114,7 @@ export function exportTasksPNG(list) {
   ops.push({ t: "title", y });
   y += 44;
   if (!groups.length) {
-    ops.push({ t: "text", y, text: "Nenhuma alteração pendente.", f: font(400, 18), c: "#555", x: P });
+    ops.push({ t: "text", y, text: "Nenhuma alteração pendente.", f: font(400, 18), c: THEME.muted, x: P });
     y += 30;
   }
   groups.forEach((g) => {
@@ -106,14 +124,14 @@ export function exportTasksPNG(list) {
     g.items.forEach((it, i) => {
       measure.font = font(600, 18);
       wrap(measure, `${exportNumber(i)} - ${it.title}`, W - 2 * P - 20).forEach((l) => {
-        ops.push({ t: "text", y, text: l, f: font(600, 18), c: "#1f2937", x: P + 20 });
+        ops.push({ t: "text", y, text: l, f: font(600, 18), c: THEME.text, x: P + 20 });
         y += 26;
       });
       const sub = [it.extra, it.description].filter(Boolean).join(" — ");
       if (sub) {
         measure.font = font(400, 14);
         wrap(measure, sub, W - 2 * P - 64).forEach((l) => {
-          ops.push({ t: "text", y: y - 2, text: l, f: font(400, 14), c: "#6b7280", x: P + 64 });
+          ops.push({ t: "text", y: y - 2, text: l, f: font(400, 14), c: THEME.muted, x: P + 64 });
           y += 20;
         });
       }
@@ -128,21 +146,28 @@ export function exportTasksPNG(list) {
   canvas.height = H * S;
   const ctx = canvas.getContext("2d");
   ctx.scale(S, S);
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = THEME.bg;
   ctx.fillRect(0, 0, W, H);
+  const grad = ctx.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0, THEME.blueDark);
+  grad.addColorStop(1, THEME.blue);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, 5);
   ctx.textBaseline = "alphabetic";
   ops.forEach((o) => {
     if (o.t === "title") {
       ctx.font = font(700, 28);
-      ctx.fillStyle = "#111827";
+      ctx.fillStyle = THEME.title;
       ctx.fillText(EXPORT_TITLE, P, o.y);
       ctx.font = font(400, 14);
-      ctx.fillStyle = "#9ca3af";
+      ctx.fillStyle = THEME.muted;
       ctx.textAlign = "right";
       ctx.fillText(today(), W - P, o.y);
       ctx.textAlign = "left";
+      ctx.fillStyle = THEME.border;
+      ctx.fillRect(P, o.y + 18, W - 2 * P, 1);
     } else if (o.t === "group") {
-      ctx.fillStyle = COLORS[o.g.key];
+      ctx.fillStyle = THEME.blue;
       ctx.fillRect(P, o.y - 20, 6, 26);
       ctx.font = font(700, 22);
       ctx.fillText(`${o.g.label} (${o.g.items.length})`, P + 18, o.y);
