@@ -49,3 +49,25 @@ export function sortTasks(list) {
     return 0;
   });
 }
+
+// Monta o texto "Alterações a serem feitas", agrupado por importância
+// (Urgente → Alta → Média → Baixa) e numerado dentro de cada grupo.
+// Só entram tarefas abertas (A fazer / Fazendo).
+export function buildTasksExport(list) {
+  const open = sortTasks(list.filter((t) => t.status !== "done"));
+  const lines = ["Alterações a serem feitas:"];
+  PRIORITIES.forEach((p) => {
+    const group = open.filter((t) => (PRIORITY_RANK[t.priority] !== undefined ? t.priority : "media") === p.key);
+    if (!group.length) return;
+    lines.push("", p.label);
+    group.forEach((t, i) => {
+      const extra = [t.pageTitle && `page: ${t.pageTitle}`, t.dueDate && `prazo: ${t.dueDate.split("-").reverse().join("/")}`]
+        .filter(Boolean)
+        .join(" · ");
+      lines.push(`${String(i + 1).padStart(2, "0")} - ${t.title}${extra ? ` (${extra})` : ""}`);
+      if (t.description?.trim()) lines.push(`     ${t.description.trim().replace(/\n+/g, " ")}`);
+    });
+  });
+  if (lines.length === 1) lines.push("", "Nenhuma alteração pendente.");
+  return lines.join("\n") + "\n";
+}

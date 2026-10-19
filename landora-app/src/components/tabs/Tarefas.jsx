@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCollection } from "../../lib/useCollection";
-import { PRIORITIES, isOverdue, sortTasks } from "../../lib/tasks";
+import { PRIORITIES, buildTasksExport, isOverdue, sortTasks } from "../../lib/tasks";
 import { TaskFormModal, TaskItem } from "../TaskParts";
 
 export default function Tarefas() {
@@ -47,6 +47,24 @@ export default function Tarefas() {
     return c;
   }, [tasks]);
 
+  const [exportMsg, setExportMsg] = useState("");
+  const exportTasks = async () => {
+    const text = buildTasksExport(withTitles);
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `alteracoes-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    try {
+      await navigator.clipboard.writeText(text);
+      setExportMsg("Baixado e copiado!");
+    } catch {
+      setExportMsg("Arquivo baixado!");
+    }
+    setTimeout(() => setExportMsg(""), 2500);
+  };
+
   const goPage = (pageId) => navigate("/landing-pages", { state: { openPageId: pageId } });
 
   return (
@@ -59,9 +77,15 @@ export default function Tarefas() {
             {lateCount > 0 && <span className="task-late-note"> {lateCount} atrasada{lateCount > 1 ? "s" : ""}.</span>}
           </p>
         </div>
-        <button className="btn btn-gradient" onClick={() => setModal("new")}>
-          + Nova tarefa
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {exportMsg && <span className="muted">{exportMsg}</span>}
+          <button className="btn" onClick={exportTasks} title="Baixa um .txt com as alterações abertas, por importância">
+            ⤓ Exportar alterações
+          </button>
+          <button className="btn btn-gradient" onClick={() => setModal("new")}>
+            + Nova tarefa
+          </button>
+        </div>
       </header>
 
       <div className="task-summary">
