@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { onSnapshot } from "firebase/firestore";
+import { onSnapshot, query, where } from "firebase/firestore";
 import { loadYT } from "../context/MusicContext";
 import { useCollection } from "../lib/useCollection";
 import { findUrl, fmtTime, parseTime, serverNow } from "../lib/music";
@@ -11,18 +11,14 @@ import {
   createSound,
   deleteSound,
   fireSound,
-  readPadPrefs,
-  soundpadLiveRef,
+  soundpadFiresCol,
   stopAllSounds,
   uploadSoundFile,
-  writePadPrefs,
 } from "../lib/soundpad";
 
 /* ---------------- Toca os sons que alguém soltou (fica ativo durante a call toda) ---------------- */
 export function SoundpadListener({ callId, sinkId = "" }) {
   const active = useRef(new Set()); // funções que param cada som tocando
-  const lastId = useRef(null);
-  const first = useRef(true);
   const hostRef = useRef(null);
   const sinkRef = useRef(sinkId);
   sinkRef.current = sinkId;
@@ -87,30 +83,24 @@ export function SoundpadListener({ callId, sinkId = "" }) {
   };
 
   useEffect(() => {
-    first.current = true;
-    lastId.current = null;
     if (!callId) return undefined;
+    // Só o que for solto depois que você entrou toca.
+    const since = serverNow() - 2000;
     const unsub = onSnapshot(
-      soundpadLiveRef(callId),
+      query(soundpadFiresCol(callId), where("at", ">", since)),
       (snap) => {
-        const d = snap.data();
-        if (first.current) {
-          // O que já estava lá antes de você entrar não toca.
-          first.current = false;
-          lastId.current = d?.id || null;
-          return;
-        }
-        if (!d || d.id === lastId.current) return;
-        lastId.current = d.id;
-        if (Math.abs(serverNow() - (d.at || 0)) > 8000) return; // disparo velho
-        if (d.stop) {
-          stopAll();
-          setToast({ id: d.id, text: `🔇 ${d.byName || "Alguém"} calou os sons` });
-          return;
-        }
-        setToast({ id: d.id, text: `${d.emoji || "🔊"} ${d.name || "Som"} · ${d.byName || "alguém"}` });
-        const prefs = readPadPrefs();
-        if (prefs.on) play(d, prefs.vol);
+        snap.docChanges().forEach((c) => {
+          if (c.type !== "added") return;
+          const d = c.doc.data();
+          if (Math.abs(serverNow() - (d.at || 0)) > 8000) return; // disparo velho
+          if (d.stop) {
+            stopAll();
+            setToast({ id: c.doc.id, text: `🔇 ${d.byName || "Alguém"} calou os sons` });
+            return;
+          }
+          setToast({ id: c.doc.id, text: `${d.emoji || "🔊"} ${d.name || "Som"} · ${d.byName || "alguém"}` });
+          play(d, 100);
+        });
       },
       () => {}
     );
@@ -143,21 +133,6 @@ export function SoundpadListener({ callId, sinkId = "" }) {
 
 /* ---------------- Painel: sua lista de sons ---------------- */
 const EMOJIS = ["🔊", "🧨", "😂", "📯", "👏", "💥", "🐐", "🚨", "🥁", "😱", "🤡", "🎺"];
-
-function usePadPrefs() {
-  const [prefs, setPrefs] = useState(readPadPrefs);
-  useEffect(() => {
-    const on = () => setPrefs(readPadPrefs());
-    window.addEventListener("landora-soundpad-prefs", on);
-    return () => window.removeEventListener("landora-soundpad-prefs", on);
-  }, []);
-  const update = (patch) => {
-    const next = { ...readPadPrefs(), ...patch };
-    writePadPrefs(next);
-    setPrefs(next);
-  };
-  return [prefs, update];
-}
 
 function NewSound({ me, onDone }) {
   const [name, setName] = useState("");
@@ -239,18 +214,14 @@ function NewSound({ me, onDone }) {
 export function SoundOraPadPanel({ callId, me, onClose }) {
   const { data } = useCollection("soundpadSounds", "createdAt", "asc");
   const mine = useMemo(() => data.filter((s) => s.ownerId === me?.uid), [data, me?.uid]);
-  const [prefs, setPrefs] = usePadPrefs();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [cool, setCool] = useState(false);
   const [err, setErr] = useState("");
   const mineRef = useRef(mine);
   mineRef.current = mine;
 
   const fire = (s) => {
-    if (cool || !callId) return;
-    setCool(true);
-    setTimeout(() => setCool(false), 900); // evita metralhadora de sons
+    if (!callId) return;
     setErr("");
     fireSound(callId, me, s).catch(() => setErr("Não consegui soltar o som. Tente de novo."));
   };
@@ -282,24 +253,8 @@ export function SoundOraPadPanel({ callId, me, onClose }) {
       </div>
 
       <div className="pad-prefs">
-        <label className="pad-toggle">
-          <input type="checkbox" checked={prefs.on} onChange={(e) => setPrefs({ on: e.target.checked })} />
-          <span>Ouvir os sons</span>
-        </label>
-        <input
-          className="vm-slider"
-          type="range"
-          min="0"
-          max="100"
-          value={prefs.vol}
-          onChange={(e) => setPrefs({ vol: Number(e.target.value) })}
-          disabled={!prefs.on}
-          aria-label="Volume dos sons (só para você)"
-          title={`Volume dos sons: ${prefs.vol}% (só para você)`}
-          style={{ "--p": `${prefs.vol}%` }}
-        />
         <button type="button" className="btn-link" onClick={() => stopAllSounds(callId, me).catch(() => {})} title="Para todos os sons tocando, para todo mundo">
-          🔇 Calar
+          🔇 Calar todos os sons
         </button>
       </div>
 
@@ -317,7 +272,7 @@ export function SoundOraPadPanel({ callId, me, onClose }) {
             <div className="pad-grid">
               {mine.map((s, i) => (
                 <div key={s.id} className="pad-cell">
-                  <button type="button" className="pad-btn" onClick={() => fire(s)} disabled={cool || editing} title={`Soltar “${s.name}” para todos`}>
+                  <button type="button" className="pad-btn" onClick={() => fire(s)} disabled={editing} title={`Soltar “${s.name}” para todos`}>
                     <span className="pad-emoji">{s.emoji || "🔊"}</span>
                     <span className="pad-name">{s.name}</span>
                     <small>

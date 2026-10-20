@@ -6,17 +6,18 @@
 // microfone, então o som não passa pelo anti-ruído e chega limpo.
 //
 //   soundpadSounds/{id}          → { ownerId, ownerName, name, emoji, kind, url?, yt?, start, end, createdAt }
-//   calls/{callId}/soundpad/live → último disparo { id, by, byName, name, emoji, kind, url?, yt?, start, end, at }
-//                                   ou { id, stop: true, by, byName, at } para calar todos os sons
+//   calls/{callId}/soundpadFires/{auto} → cada disparo { by, byName, name, emoji, kind, url?, yt?, start, end, at }
+//                                          ou { stop: true, by, byName, at } para calar todos os sons
+//   Um documento por disparo: dá para soltar vários sons seguidos e todos tocam juntos.
 
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { uploadFile } from "./cloudinary";
 import { serverNow } from "./music";
 
 export const MAX_SOUND_SECONDS = 30;
 export const soundsCol = () => collection(db, "soundpadSounds");
-export const soundpadLiveRef = (callId) => doc(db, "calls", callId, "soundpad", "live");
+export const soundpadFiresCol = (callId) => collection(db, "calls", callId, "soundpadFires");
 
 const YT_RE = /(?:youtube\.com|youtu\.be)/i;
 const SOCIAL_RE = /(?:tiktok\.com|instagram\.com|facebook\.com|fb\.watch|kwai)/i;
@@ -99,11 +100,8 @@ export async function createSound(user, data) {
 export const updateSound = (id, patch) => updateDoc(doc(db, "soundpadSounds", id), patch);
 export const deleteSound = (id) => deleteDoc(doc(db, "soundpadSounds", id));
 
-const rid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-
 export async function fireSound(callId, user, s) {
-  await setDoc(soundpadLiveRef(callId), {
-    id: rid(),
+  await addDoc(soundpadFiresCol(callId), {
     by: user?.uid || "",
     byName: user?.name || "",
     name: s.name || "",
@@ -117,23 +115,5 @@ export async function fireSound(callId, user, s) {
 }
 
 export async function stopAllSounds(callId, user) {
-  await setDoc(soundpadLiveRef(callId), { id: rid(), stop: true, by: user?.uid || "", byName: user?.name || "", at: serverNow() });
-}
-
-/* ---------------- preferências (só deste aparelho) ---------------- */
-export function readPadPrefs() {
-  try {
-    const p = JSON.parse(localStorage.getItem("landora.soundpad") || "{}");
-    return { on: p.on !== false, vol: Number.isFinite(p.vol) ? p.vol : 70 };
-  } catch {
-    return { on: true, vol: 70 };
-  }
-}
-export function writePadPrefs(p) {
-  try {
-    localStorage.setItem("landora.soundpad", JSON.stringify(p));
-  } catch {
-    /* sem armazenamento */
-  }
-  window.dispatchEvent(new Event("landora-soundpad-prefs"));
+  await addDoc(soundpadFiresCol(callId), { stop: true, by: user?.uid || "", byName: user?.name || "", at: serverNow() });
 }
