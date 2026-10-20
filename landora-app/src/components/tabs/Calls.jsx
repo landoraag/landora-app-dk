@@ -147,6 +147,73 @@ function useAudioDevices() {
 }
 
 // Escolha do microfone (entrada) e do alto-falante/fone (saída).
+const FEATURES = [
+  { id: "music", icon: "🎵", label: "Música", desc: "Ouvir junto: YouTube, Spotify, fila e playlists" },
+  { id: "telao", icon: "📺", label: "Telão", desc: "Uma tela grande compartilhada com todos da call" },
+  { id: "soundpad", icon: "🎛️", label: "SoundOraPad", desc: "Mesa de áudio com efeitos sonoros para a call" },
+];
+
+function FeaturesMenu({ active, musicBadge, onPick, onClose }) {
+  return (
+    <div className="audio-panel features-menu">
+      <div className="audio-panel-head">
+        <b>✨ Funcionalidades</b>
+        <button type="button" className="btn-link" onClick={onClose}>
+          fechar
+        </button>
+      </div>
+      {FEATURES.map((f) => (
+        <button
+          type="button"
+          key={f.id}
+          className={"feature-item" + (active === f.id ? " on" : "")}
+          onClick={() => onPick(f.id)}
+        >
+          <span className="feature-icon">{f.icon}</span>
+          <span className="feature-text">
+            <b>
+              {f.label}
+              {f.id === "music" ? musicBadge : ""}
+            </b>
+            <small>{f.desc}</small>
+          </span>
+          {active === f.id && <span className="feature-open">aberto</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SoonPanel({ icon, title, text, onClose }) {
+  return (
+    <div className="music-panel side-panel feature-soon">
+      <div className="music-head">
+        <b>
+          {icon} {title}
+        </b>
+        <button type="button" className="btn-link" onClick={onClose} style={{ marginLeft: "auto" }}>
+          fechar
+        </button>
+      </div>
+      <div className="feature-soon-body">
+        <span className="feature-soon-icon">{icon}</span>
+        <p>{text}</p>
+        <span className="feature-soon-tag">Em breve</span>
+      </div>
+    </div>
+  );
+}
+
+function TelaoPanel({ onClose }) {
+  return <SoonPanel icon="📺" title="Telão" text="Uma tela grande compartilhada com todos da call." onClose={onClose} />;
+}
+
+function SoundOraPadPanel({ onClose }) {
+  return (
+    <SoonPanel icon="🎛️" title="SoundOraPad" text="Mesa de áudio com efeitos sonoros que todos na call ouvem." onClose={onClose} />
+  );
+}
+
 function AudioPanel({ onClose }) {
   const { session, outputId, setOutputId, setMic, setNoiseLevel } = useCall();
   const [level, setLevel] = useState(session?.noiseLevel ?? 80);
@@ -337,23 +404,30 @@ export function InCall() {
   const camCount = useVideoInputCount(!!session?.local?.cam);
   const [menu, setMenu] = useState(null);
   const [showAudio, setShowAudio] = useState(false);
-  const [showMusic, setShowMusic] = useState(() => {
+  // Painel lateral de funcionalidades: "music" | "telao" | "soundpad" | null
+  const [feature, setFeatureState] = useState(() => {
     try {
-      return localStorage.getItem("landora.music.panel") === "1";
+      const saved = localStorage.getItem("landora.call.feature");
+      if (saved && FEATURES.some((f) => f.id === saved)) return saved;
+      if (localStorage.getItem("landora.music.panel") === "1") return "music";
     } catch {
-      return false;
+      /* sem armazenamento */
     }
+    return null;
   });
+  const [showFeatures, setShowFeatures] = useState(false);
   const music = useMusic();
-  const toggleMusic = () =>
-    setShowMusic((v) => {
-      try {
-        localStorage.setItem("landora.music.panel", v ? "0" : "1");
-      } catch {
-        /* sem armazenamento */
-      }
-      return !v;
-    });
+  const setFeature = (id) => {
+    setFeatureState(id);
+    setShowFeatures(false);
+    try {
+      localStorage.setItem("landora.call.feature", id || "");
+      localStorage.removeItem("landora.music.panel");
+    } catch {
+      /* sem armazenamento */
+    }
+  };
+  const musicBadge = music?.current ? (music.state?.playing ? " ▶" : " ⏸") : "";
   const [, setTick] = useState(0);
   // Atualiza a tela a cada 2s para o aviso de conexão mudar sozinho.
   useEffect(() => {
@@ -406,7 +480,7 @@ export function InCall() {
       {session.notice && <p className="call-notice">{session.notice}</p>}
       {error && <p className="auth-error">{error}</p>}
 
-      <div className={"call-main" + (showMusic ? " with-music" : "")}>
+      <div className={"call-main" + (feature ? " with-side" : "")}>
       <div className="call-stage">
         {screens.length > 0 && (
         <div className={"call-screens" + (screens.length > 1 ? " multi" : "")}>
@@ -446,7 +520,9 @@ export function InCall() {
           ))}
         </div>
       </div>
-      {showMusic && <MusicPanel onClose={toggleMusic} />}
+      {feature === "music" && <MusicPanel onClose={() => setFeature(null)} />}
+      {feature === "telao" && <TelaoPanel onClose={() => setFeature(null)} />}
+      {feature === "soundpad" && <SoundOraPadPanel onClose={() => setFeature(null)} />}
       </div>
 
       <div className="call-controls">
@@ -482,13 +558,19 @@ export function InCall() {
           </button>
         )}
         <button
-          className={"ctrl-btn " + (showMusic ? "on" : "")}
-          onClick={toggleMusic}
-          title="Ouvir música junto: links do YouTube e Spotify, fila e playlists"
+          className={"ctrl-btn " + (feature || showFeatures ? "on" : "")}
+          onClick={() => {
+            setShowFeatures((v) => !v);
+            setShowAudio(false);
+          }}
+          title="Música, Telão e SoundOraPad"
         >
-          🎵 Música{music?.current ? (music.state?.playing ? " ▶" : " ⏸") : ""}
+          ✨ Funcionalidades{musicBadge}
         </button>
-        <button className={"ctrl-btn " + (showAudio ? "on" : "")} onClick={() => setShowAudio((v) => !v)}>
+        <button className={"ctrl-btn " + (showAudio ? "on" : "")} onClick={() => {
+            setShowAudio((v) => !v);
+            setShowFeatures(false);
+          }}>
           ⚙️ Áudio
         </button>
         <button
@@ -527,6 +609,14 @@ export function InCall() {
           Sair da call
         </button>
         {showAudio && <AudioPanel onClose={() => setShowAudio(false)} />}
+        {showFeatures && (
+          <FeaturesMenu
+            active={feature}
+            musicBadge={musicBadge}
+            onPick={(id) => setFeature(feature === id ? null : id)}
+            onClose={() => setShowFeatures(false)}
+          />
+        )}
       </div>
       {menu && <VolumeMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>

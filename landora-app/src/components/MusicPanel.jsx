@@ -286,7 +286,7 @@ export default function MusicPanel({ onClose }) {
   if (!callId) return null;
 
   return (
-    <div className="music-panel">
+    <div className="music-panel side-panel">
       <div className="music-head">
         <b>🎵 Música</b>
         <div className="music-tabs">

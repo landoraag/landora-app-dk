@@ -2112,9 +2112,9 @@ html { background-color: var(--black, #0a0a0a); }
 /* ---------- Música nas calls ---------- */
 .call-main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 @media (min-width: 1100px) {
-  .call-main.with-music { flex-direction: row; align-items: stretch; }
-  .call-main.with-music .call-stage { min-width: 0; }
-  .call-main.with-music .music-panel { width: 380px; flex: none; max-height: calc(100vh - 230px); position: sticky; top: 0; }
+  .call-main.with-side { flex-direction: row; align-items: stretch; }
+  .call-main.with-side .call-stage { min-width: 0; }
+  .call-main.with-side .side-panel { width: 380px; flex: none; max-height: calc(100vh - 230px); position: sticky; top: 0; }
 }
 .music-panel { display: flex; flex-direction: column; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; max-height: 70vh; min-height: 360px; }
 .music-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -2308,3 +2308,18 @@ html.has-pseudo-fs .music-mini { display: none; }
 .casino-result small { display: block; font-size: 0.72rem; opacity: .8; }
 .game-card.t-charity { border-color: rgba(244,114,182,0.4); }
 .game-card.t-levelup { border-color: rgba(168,85,247,0.5); background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(0,87,255,0.1)); }
+
+/* ---------- Funcionalidades da call (Música, Telão, SoundOraPad) ---------- */
+.features-menu { gap: 8px; }
+.feature-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; }
+.feature-item:hover { border-color: var(--blue-light); }
+.feature-item.on { background: rgba(0,87,255,0.2); border-color: var(--blue-light); }
+.feature-icon { font-size: 1.3rem; width: 32px; text-align: center; flex: none; }
+.feature-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.feature-text b { font-size: 0.88rem; }
+.feature-text small { font-size: 0.74rem; color: var(--gray-soft); }
+.feature-open { font-size: 0.68rem; color: var(--blue-light); flex: none; }
+.feature-soon-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; color: var(--gray-soft); }
+.feature-soon-icon { font-size: 2.6rem; }
+.feature-soon-body p { margin: 0; font-size: 0.86rem; max-width: 260px; }
+.feature-soon-tag { padding: 4px 12px; border-radius: 999px; background: rgba(0,87,255,0.2); border: 1px solid var(--blue-light); color: var(--text); font-size: 0.74rem; font-weight: 600; }
