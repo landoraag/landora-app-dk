@@ -4,6 +4,7 @@ import { createMeter, createPlayer, getAudioCtx, unlockAudio } from "../lib/call
 import { useAuth } from "./AuthContext";
 import { notify } from "../lib/push";
 import { MusicProvider } from "./MusicContext";
+import { SoundpadListener } from "../components/SoundOraPad";
 
 const CallContext = createContext(null);
 
@@ -345,7 +346,10 @@ export function CallProvider({ children }) {
         pip: { supported: pipSupported, available: !!pipTrack, active: inPip, enter: enterPip, exit: exitPip },
       }}
     >
-      <MusicProvider callId={status === "live" ? active?.id : null}>{children}</MusicProvider>
+      <MusicProvider callId={status === "live" ? active?.id : null}>
+        {children}
+        <SoundpadListener callId={status === "live" ? active?.id : null} sinkId={outputId} />
+      </MusicProvider>
       {peers.map((p) => (
         <span key={p.id}>
           <AudioSink

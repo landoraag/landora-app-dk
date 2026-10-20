@@ -2349,3 +2349,29 @@ html.has-pseudo-fs .telao-stage.is-fs { position: fixed; inset: 0; z-index: 1000
 @media (max-width: 600px) {
   .telao-time, .telao-vol { display: none; }
 }
+
+/* ---------- SoundOraPad (mesa de sons) ---------- */
+.pad-yt-host { position: fixed; left: -10000px; top: 0; width: 200px; height: 113px; overflow: hidden; pointer-events: none; }
+.pad-toast { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 60; padding: 8px 16px; border-radius: 999px; background: #0b1120; border: 1px solid rgba(0,87,255,0.5); color: var(--text); font-size: 0.85rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: item-soft .25s ease; pointer-events: none; max-width: calc(100vw - 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pad-prefs { display: flex; align-items: center; gap: 10px; }
+.pad-prefs .vm-slider { flex: 1; min-width: 0; }
+.pad-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--gray-soft); flex: none; cursor: pointer; }
+.pad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.pad-cell { position: relative; }
+.pad-btn { width: 100%; min-height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 6px; border-radius: 14px; border: 1px solid var(--border); background: linear-gradient(160deg, rgba(0,87,255,0.14), rgba(255,255,255,0.03)); color: var(--text); cursor: pointer; transition: transform .08s ease, border-color .15s ease; }
+.pad-btn:hover:not(:disabled) { border-color: var(--blue-light); }
+.pad-btn:active:not(:disabled) { transform: scale(0.95); background: rgba(0,87,255,0.3); }
+.pad-btn:disabled { opacity: 0.6; cursor: default; }
+.pad-emoji { font-size: 1.7rem; line-height: 1; }
+.pad-name { font-size: 0.8rem; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pad-btn small { font-size: 0.64rem; color: var(--gray-soft); }
+.pad-del { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: none; background: var(--red); color: white; cursor: pointer; font-size: 0.7rem; }
+.pad-new { display: flex; flex-direction: column; gap: 8px; }
+.pad-new-row { display: flex; gap: 6px; }
+.pad-new-row > * { flex: 1; min-width: 0; }
+.pad-new-row select { flex: none; width: 64px; }
+.pad-new input, .pad-new select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; color: var(--text); font-size: 0.85rem; }
+.pad-new input:focus { outline: none; border-color: var(--blue-light); }
+.pad-file { display: block; cursor: pointer; }
+.pad-file input { display: none; }
+.pad-file span { display: block; padding: 12px; border-radius: 10px; border: 1px dashed var(--blue-light); background: rgba(0,87,255,0.08); font-size: 0.8rem; color: var(--gray-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

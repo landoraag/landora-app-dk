@@ -6,6 +6,7 @@ import VolumeMenu from "./VolumeMenu";
 import MusicPanel from "../MusicPanel";
 import { useMusic } from "../../context/MusicContext";
 import { TelaoPanel, TelaoStage, useTelao } from "../Telao";
+import { SoundOraPadPanel } from "../SoundOraPad";
 
 const CAN_SHARE = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
 const IS_TOUCH =
@@ -151,7 +152,7 @@ function useAudioDevices() {
 const FEATURES = [
   { id: "music", icon: "🎵", label: "Música", desc: "Ouvir junto: YouTube, Spotify, fila e playlists" },
   { id: "telao", icon: "📺", label: "Telão", desc: "Assistir vídeos juntos: YouTube e arquivos de vídeo" },
-  { id: "soundpad", icon: "🎛️", label: "SoundOraPad", desc: "Mesa de áudio com efeitos sonoros para a call" },
+  { id: "soundpad", icon: "🎛️", label: "SoundOraPad", desc: "Sua mesa de sons: solte efeitos que todos escutam" },
 ];
 
 function FeaturesMenu({ active, musicBadge, onPick, onClose }) {
@@ -182,32 +183,6 @@ function FeaturesMenu({ active, musicBadge, onPick, onClose }) {
         </button>
       ))}
     </div>
-  );
-}
-
-function SoonPanel({ icon, title, text, onClose }) {
-  return (
-    <div className="music-panel side-panel feature-soon">
-      <div className="music-head">
-        <b>
-          {icon} {title}
-        </b>
-        <button type="button" className="btn-link" onClick={onClose} style={{ marginLeft: "auto" }}>
-          fechar
-        </button>
-      </div>
-      <div className="feature-soon-body">
-        <span className="feature-soon-icon">{icon}</span>
-        <p>{text}</p>
-        <span className="feature-soon-tag">Em breve</span>
-      </div>
-    </div>
-  );
-}
-
-function SoundOraPadPanel({ onClose }) {
-  return (
-    <SoonPanel icon="🎛️" title="SoundOraPad" text="Mesa de áudio com efeitos sonoros que todos na call ouvem." onClose={onClose} />
   );
 }
 
@@ -533,7 +508,7 @@ export function InCall() {
           onClose={() => setFeature(null)}
         />
       )}
-      {feature === "soundpad" && <SoundOraPadPanel onClose={() => setFeature(null)} />}
+      {feature === "soundpad" && <SoundOraPadPanel callId={music?.callId} me={music?.me} onClose={() => setFeature(null)} />}
       </div>
 
       <div className="call-controls">
