@@ -40,7 +40,7 @@ function writeLocal(key, value) {
 
 // Carrega a API do player do YouTube uma vez só.
 let ytReady = null;
-function loadYT() {
+export function loadYT() {
   if (ytReady) return ytReady;
   ytReady = new Promise((resolve) => {
     if (window.YT?.Player) return resolve(window.YT);

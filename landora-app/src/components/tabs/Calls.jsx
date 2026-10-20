@@ -5,6 +5,7 @@ import { QUALITY_OPTIONS } from "../../lib/webrtc";
 import VolumeMenu from "./VolumeMenu";
 import MusicPanel from "../MusicPanel";
 import { useMusic } from "../../context/MusicContext";
+import { TelaoPanel, TelaoStage, useTelao } from "../Telao";
 
 const CAN_SHARE = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
 const IS_TOUCH =
@@ -149,7 +150,7 @@ function useAudioDevices() {
 // Escolha do microfone (entrada) e do alto-falante/fone (saída).
 const FEATURES = [
   { id: "music", icon: "🎵", label: "Música", desc: "Ouvir junto: YouTube, Spotify, fila e playlists" },
-  { id: "telao", icon: "📺", label: "Telão", desc: "Uma tela grande compartilhada com todos da call" },
+  { id: "telao", icon: "📺", label: "Telão", desc: "Assistir vídeos juntos: YouTube e arquivos de vídeo" },
   { id: "soundpad", icon: "🎛️", label: "SoundOraPad", desc: "Mesa de áudio com efeitos sonoros para a call" },
 ];
 
@@ -202,10 +203,6 @@ function SoonPanel({ icon, title, text, onClose }) {
       </div>
     </div>
   );
-}
-
-function TelaoPanel({ onClose }) {
-  return <SoonPanel icon="📺" title="Telão" text="Uma tela grande compartilhada com todos da call." onClose={onClose} />;
 }
 
 function SoundOraPadPanel({ onClose }) {
@@ -427,6 +424,9 @@ export function InCall() {
       /* sem armazenamento */
     }
   };
+  const telao = useTelao(music?.callId, music?.me?.uid);
+  const telaoBoxRef = useRef(null);
+  const telaoFs = useFullscreen(telaoBoxRef);
   const musicBadge = music?.current ? (music.state?.playing ? " ▶" : " ⏸") : "";
   const [, setTick] = useState(0);
   // Atualiza a tela a cada 2s para o aviso de conexão mudar sozinho.
@@ -482,6 +482,9 @@ export function InCall() {
 
       <div className={"call-main" + (feature ? " with-side" : "")}>
       <div className="call-stage">
+        {telao.current && music?.callId && (
+          <TelaoStage callId={music.callId} state={telao.state} current={telao.current} boxRef={telaoBoxRef} fs={telaoFs} />
+        )}
         {screens.length > 0 && (
         <div className={"call-screens" + (screens.length > 1 ? " multi" : "")}>
         {screens.map((s) => (
@@ -521,7 +524,15 @@ export function InCall() {
         </div>
       </div>
       {feature === "music" && <MusicPanel onClose={() => setFeature(null)} />}
-      {feature === "telao" && <TelaoPanel onClose={() => setFeature(null)} />}
+      {feature === "telao" && (
+        <TelaoPanel
+          callId={music?.callId}
+          state={telao.state}
+          current={telao.current}
+          me={music?.me}
+          onClose={() => setFeature(null)}
+        />
+      )}
       {feature === "soundpad" && <SoundOraPadPanel onClose={() => setFeature(null)} />}
       </div>
 
