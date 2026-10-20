@@ -119,6 +119,11 @@ export const GAME_NAMES = {
   loan: "🤝 Empréstimo",
   admin: "⚙️ Administração",
   pvp: "⚔️ Desafio",
+  shop: "🛍️ Compras",
+  use: "🎒 Inventário",
+  charity: "💝 Caridade",
+  persona: "🧑 Persona",
+  levelup: "⭐ Subiu de nível",
 };
 
 /* ---------------- Blackjack ---------------- */

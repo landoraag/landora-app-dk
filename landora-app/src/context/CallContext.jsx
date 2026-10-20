@@ -3,6 +3,7 @@ import { CallSession } from "../lib/webrtc";
 import { createMeter, createPlayer, getAudioCtx, unlockAudio } from "../lib/callAudio";
 import { useAuth } from "./AuthContext";
 import { notify } from "../lib/push";
+import { MusicProvider } from "./MusicContext";
 
 const CallContext = createContext(null);
 
@@ -344,7 +345,7 @@ export function CallProvider({ children }) {
         pip: { supported: pipSupported, available: !!pipTrack, active: inPip, enter: enterPip, exit: exitPip },
       }}
     >
-      {children}
+      <MusicProvider callId={status === "live" ? active?.id : null}>{children}</MusicProvider>
       {peers.map((p) => (
         <span key={p.id}>
           <AudioSink

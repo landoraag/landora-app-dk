@@ -704,7 +704,7 @@ export function GameResultCard({ game }) {
     <div className={"game-card " + (net > 0 ? "win" : net < 0 ? "lose" : "push") + " t-" + game.type}>
       <div className="gc-head">
         <b>{GAME_NAMES[game.type] || "🎲 Jogo"}</b>
-        {!["pay", "loan", "admin"].includes(game.type) && (
+        {!["pay", "loan", "admin", "persona", "use"].includes(game.type) && (
           <span className="gc-net">{net > 0 ? `+${coins(net)}` : net < 0 ? `-${coins(-net)}` : coins(0)}</span>
         )}
       </div>

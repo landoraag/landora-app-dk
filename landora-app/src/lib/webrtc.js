@@ -422,6 +422,7 @@ export class CallSession {
         const alive = left.docs.filter((d) => Math.abs(Date.now() - (d.data().lastSeen || 0)) < 90000);
         if (alive.length === 0) {
           await Promise.all(left.docs.map((d) => deleteDoc(d.ref)));
+          await deleteDoc(doc(db, "calls", this.callId, "music", "state")).catch(() => {});
           await deleteDoc(doc(db, "calls", this.callId));
         }
       }

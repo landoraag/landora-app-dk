@@ -3,6 +3,8 @@ import { useCall } from "../../context/CallContext";
 import Avatar from "../Avatar";
 import { QUALITY_OPTIONS } from "../../lib/webrtc";
 import VolumeMenu from "./VolumeMenu";
+import MusicPanel from "../MusicPanel";
+import { useMusic } from "../../context/MusicContext";
 
 const CAN_SHARE = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
 const IS_TOUCH =
@@ -335,6 +337,23 @@ export function InCall() {
   const camCount = useVideoInputCount(!!session?.local?.cam);
   const [menu, setMenu] = useState(null);
   const [showAudio, setShowAudio] = useState(false);
+  const [showMusic, setShowMusic] = useState(() => {
+    try {
+      return localStorage.getItem("landora.music.panel") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const music = useMusic();
+  const toggleMusic = () =>
+    setShowMusic((v) => {
+      try {
+        localStorage.setItem("landora.music.panel", v ? "0" : "1");
+      } catch {
+        /* sem armazenamento */
+      }
+      return !v;
+    });
   const [, setTick] = useState(0);
   // Atualiza a tela a cada 2s para o aviso de conexão mudar sozinho.
   useEffect(() => {
@@ -387,6 +406,7 @@ export function InCall() {
       {session.notice && <p className="call-notice">{session.notice}</p>}
       {error && <p className="auth-error">{error}</p>}
 
+      <div className={"call-main" + (showMusic ? " with-music" : "")}>
       <div className="call-stage">
         {screens.length > 0 && (
         <div className={"call-screens" + (screens.length > 1 ? " multi" : "")}>
@@ -426,6 +446,8 @@ export function InCall() {
           ))}
         </div>
       </div>
+      {showMusic && <MusicPanel onClose={toggleMusic} />}
+      </div>
 
       <div className="call-controls">
         <button className={"ctrl-btn " + (me.micOn ? "on" : "off")} onClick={toggleMic}>
@@ -459,6 +481,13 @@ export function InCall() {
             {pip.active ? "🗗 Fechar miniatura" : "🗗 Miniatura"}
           </button>
         )}
+        <button
+          className={"ctrl-btn " + (showMusic ? "on" : "")}
+          onClick={toggleMusic}
+          title="Ouvir música junto: links do YouTube e Spotify, fila e playlists"
+        >
+          🎵 Música{music?.current ? (music.state?.playing ? " ▶" : " ⏸") : ""}
+        </button>
         <button className={"ctrl-btn " + (showAudio ? "on" : "")} onClick={() => setShowAudio((v) => !v)}>
           ⚙️ Áudio
         </button>

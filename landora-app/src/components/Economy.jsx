@@ -12,7 +12,6 @@ import {
   LOAN_MAX,
   ROB_CHANCE,
   ROB_COOLDOWN,
-  WORK_COOLDOWN,
   adminAdjust,
   adminGiveAll,
   adminResetAll,
@@ -30,7 +29,9 @@ import {
   withdraw,
   work,
 } from "../lib/economy";
-import { Ranking, useWallet } from "./Casino";
+import { useWallet } from "./Casino";
+import { Charity, EcoRanking, PersonaForm, PersonaSheet, PersonaStrip, Shops, announceLevelUp } from "./RPG";
+import { hasPersona, liveStats, workCooldown } from "../lib/rpg";
 import Avatar from "./Avatar";
 
 const post = (user, profile, g) => postResult(user, profile, g, ECONOMY_CHANNEL_ID).catch(() => {});
@@ -177,11 +178,15 @@ function Rob({ wallet, people, wallets, onMsg }) {
         bet: 0,
         payout: r.ok ? r.amount : -r.amount,
         text: r.ok ? `roubou ${coins(r.amount)} de ${r.victim}` : `foi pego tentando roubar ${r.victim} e pagou ${coins(r.amount)} de multa`,
-        detail: r.ok ? `Assalto a ${r.victim} deu certo` : `Tentativa contra ${r.victim} falhou`,
+        detail: `${r.ok ? `Assalto a ${r.victim} deu certo` : r.alarm ? `🚨 O alarme de ${r.victim} disparou` : `Tentativa contra ${r.victim} falhou`} · −${r.shame} pontos sociais`,
       });
       notify({
         kind: "mention",
-        title: r.ok ? `🦹 ${profile?.nickname} te roubou ${coins(r.amount)}!` : `🚓 ${profile?.nickname} tentou te roubar e pagou ${coins(r.amount)} de multa para você`,
+        title: r.ok
+          ? `🦹 ${profile?.nickname} te roubou ${coins(r.amount)}!`
+          : r.alarm
+            ? `🚨 Seu alarme pegou ${profile?.nickname}! Você recebeu ${coins(r.amount)} de multa`
+            : `🚓 ${profile?.nickname} tentou te roubar e pagou ${coins(r.amount)} de multa para você`,
         body: "Guarde suas moedas no banco 🔒",
         url: `/chat?c=${ECONOMY_CHANNEL_ID}`,
         to: [to],
@@ -195,7 +200,8 @@ function Rob({ wallet, people, wallets, onMsg }) {
     <div className="game">
       {res ? (
         <div className={"casino-result " + (res.ok ? "win" : "lose")}>
-          <b>{res.ok ? `Deu certo! Você levou de ${res.victim}` : `A polícia te pegou! Multa paga para ${res.victim}`}</b>
+          <b>{res.ok ? `Deu certo! Você levou de ${res.victim}` : res.alarm ? `🚨 O alarme disparou! Multa paga para ${res.victim}` : `A polícia te pegou! Multa paga para ${res.victim}`}</b>
+          <small>−{res.shame} pontos sociais</small>
           <span>{res.ok ? `+${coins(res.amount)}` : `-${coins(res.amount)}`}</span>
         </div>
       ) : null}
@@ -210,7 +216,7 @@ function Rob({ wallet, people, wallets, onMsg }) {
         </>
       )}
       <p className="game-hint">
-        {Math.round(ROB_CHANCE * 100)}% de chance · leva 10–25% da carteira (máx. 🪙 1.500) · falhou: multa de 20% da sua carteira para a vítima · a cada 2 h
+        {Math.round(ROB_CHANCE * 100)}% de chance (Malandro +10%, contra cachorro de guarda −15%, alarme bloqueia) · leva 10–25% da carteira (máx. 🪙 1.500) · falhou: multa de 20% da sua carteira para a vítima · a cada 2 h · suja sua fama
       </p>
     </div>
   );
@@ -387,15 +393,21 @@ export function LoanCard({ id }) {
 function Rules() {
   return (
     <div className="eco-rules">
-      <p>Moedas de mentira, só para diversão. Todo mundo começa com 🪙 1.000.</p>
+      <p>Moedas de mentira, só para diversão. Todo mundo começa com 🪙 1.000 e cria uma persona que vive na cidade.</p>
       <ul>
-        <li><b>💼 Trabalhar</b> — a cada 1 h, ganha de 🪙 100 a 🪙 250. 5% de chance de gorjeta (o triplo).</li>
+        <li><b>🧑 Persona</b> — nome, avatar e classe. Cada classe tem um bônus (salário, XP, desconto, caridade, roubo…). Trocar de classe custa 🪙 1.000.</li>
+        <li><b>⭐ Nível</b> — trabalhar, estudar, viajar e doar dá XP. Cada nível aumenta o salário em 6% e libera itens melhores. Subiu: prêmio em moedas e energia cheia.</li>
+        <li><b>⚡ Energia</b> — cada turno de trabalho gasta 20. Volta sozinha (+10 por hora) ou comendo no Mercado. Abaixo de 15 não dá para trabalhar.</li>
+        <li><b>😊 Humor</b> — cai 1 por hora e sobe com lazer, caridade e compras grandes. Humor 0 paga 80% do salário; humor 100 paga 120%.</li>
+        <li><b>💼 Trabalhar</b> — ganha de 🪙 100 a 🪙 250 vezes o seu bônus (nível, classe, cursos, veículo e humor). 5% de chance de gorjeta (o triplo). Espera de 1 h, menos com veículo.</li>
+        <li><b>🛍️ Lojas</b> — Mercado (energia), Lazer (humor), Escola (+10% de salário por curso), Imóveis (energia máxima e humor mínimo), Veículos (menos espera e mais salário) e Utilidades (alarme e pets). Trocar de casa ou carro vende o antigo pela metade.</li>
+        <li><b>💝 Caridade</b> — doe para as causas da cidade: 1 ponto social a cada 🪙 10, mais XP e humor. Pontos sociais dão títulos e descontos de até 15% nas lojas.</li>
         <li><b>🎁 Bônus diário</b> — 🪙 {DAILY_AMOUNT} uma vez por dia.</li>
-        <li><b>🏦 Banco</b> — guardar e sacar é grátis. O banco não pode ser roubado; apostas e pagamentos usam só a carteira.</li>
+        <li><b>🏦 Banco</b> — guardar e sacar é grátis. O banco não pode ser roubado; apostas, compras e pagamentos usam só a carteira.</li>
         <li><b>💸 Pagar</b> — manda moedas da sua carteira para alguém.</li>
-        <li><b>🦹 Roubar</b> — a cada 2 h. Os dois precisam ter pelo menos 🪙 100 na carteira. 45% de chance: leva de 10% a 25% da carteira da vítima (máx. 🪙 1.500). Se falhar, paga 20% da sua carteira (mín. 🪙 50, máx. 🪙 1.000) de multa para a vítima. Quem foi roubado fica protegido por 1 h.</li>
-        <li><b>🤝 Empréstimo</b> — peça até 🪙 {LOAN_MAX.toLocaleString("pt-BR")} para alguém. Se aceitar, devolve com 10% de juros em até {LOAN_DAYS} dias. Venceu: quem emprestou pode cobrar, tirando da carteira e do banco. Um pedido/dívida por vez.</li>
-        <li><b>🎰 Cassino</b> — no #cassino: jogos contra a casa e desafios entre vocês (o vencedor leva o pote).</li>
+        <li><b>🦹 Roubar</b> — a cada 2 h. 45% de chance: leva de 10% a 25% da carteira da vítima (máx. 🪙 1.500). Se falhar, paga multa para a vítima. Roubar tira pontos sociais (−15 se der certo, −5 se falhar; Malandro perde o dobro). Fama baixa deixa tudo mais caro.</li>
+        <li><b>🤝 Empréstimo</b> — peça até 🪙 {LOAN_MAX.toLocaleString("pt-BR")} para alguém. Se aceitar, devolve com 10% de juros em até {LOAN_DAYS} dias. Venceu: quem emprestou pode cobrar, tirando da carteira e do banco.</li>
+        <li><b>🎰 Cassino</b> — no #cassino: jogos contra a casa e desafios entre vocês.</li>
       </ul>
     </div>
   );
@@ -485,9 +497,11 @@ export function EconomyBar() {
 
   async function doWork() {
     try {
+      if (!hasPersona(wallet)) return setOpen("create");
       const r = await work(user.uid);
-      say(`${r.emoji} Você ${r.job} e ganhou ${coins(r.amount)}${r.tip ? " (com gorjeta! 🤑)" : ""}`);
-      post(user, profile, { type: "work", bet: 0, payout: r.amount, text: `${r.job} e ganhou ${coins(r.amount)}${r.tip ? " 🤑" : ""}`, detail: `${r.emoji} ${r.job}` });
+      say(`${r.emoji} Você ${r.job} e ganhou ${coins(r.amount)}${r.tip ? " (com gorjeta! 🤑)" : ""} · +${r.xp} XP${r.levelUp ? ` · ⭐ Nível ${r.levelUp.to}! +${coins(r.levelUp.bonus)}` : ""}`);
+      post(user, profile, { type: "work", bet: 0, payout: r.amount, text: `${r.job} e ganhou ${coins(r.amount)}${r.tip ? " 🤑" : ""}`, detail: `${r.emoji} ${wallet.persona.name} ${r.job}` });
+      announceLevelUp(user, profile, r.levelUp);
     } catch (e) {
       say(e.message, true);
     }
@@ -502,7 +516,8 @@ export function EconomyBar() {
     }
   }
 
-  const workLeft = cooldownLeft(wallet?.lastWork, WORK_COOLDOWN);
+  const workLeft = cooldownLeft(wallet?.lastWork, workCooldown(wallet));
+  const stats = hasPersona(wallet) ? liveStats(wallet, now) : null;
   const robLeft = cooldownLeft(wallet?.lastRob, ROB_COOLDOWN);
   void now;
 
@@ -512,7 +527,12 @@ export function EconomyBar() {
     rob: ["🦹 Roubar", <Rob key="r" wallet={wallet} people={people} wallets={wallets} onMsg={say} />],
     loans: ["🤝 Empréstimos", <Loans key="l" people={people} onMsg={say} />],
     rules: ["📜 Regras da economia", <Rules key="u" />],
-    ranking: ["🏆 Ranking", <Ranking key="k" />],
+    ranking: ["🏆 Ranking", <EcoRanking key="k" />],
+    create: ["🧑 Criar persona", <PersonaForm key="c" wallet={wallet} onMsg={say} onDone={() => setOpen("persona")} />],
+    edit: ["✏️ Editar persona", <PersonaForm key="e" wallet={wallet} onMsg={say} onDone={() => setOpen("persona")} />],
+    persona: ["🧑 Ficha da persona", <PersonaSheet key="s" wallet={wallet} onMsg={say} onEdit={() => setOpen("edit")} onShop={() => setOpen("shops")} />],
+    shops: ["🛍️ Lojas", <Shops key="h" wallet={wallet} onMsg={say} />],
+    charity: ["💝 Caridade", <Charity key="y" wallet={wallet} onMsg={say} />],
     admin: ["⚙️ Administração", <Admin key="a" wallets={walletsList} onMsg={say} />],
   };
 
@@ -542,12 +562,27 @@ export function EconomyBar() {
         </div>
         {msg && <span className={"casino-toast" + (msg.bad ? " bad" : "")}>{msg.text}</span>}
       </div>
+      <PersonaStrip wallet={wallet} onOpen={() => setOpen("persona")} onCreate={() => setOpen("create")} />
       <div className="casino-games eco-actions">
         <button type="button" className="casino-game g-work" onClick={doWork} disabled={!wallet}>
           <span className="cg-icon">💼</span>
           <span className="cg-text">
             <b>Trabalhar</b>
-            <span>{workLeft ? `em ${fmtWait(workLeft)}` : "🪙 100–250"}</span>
+            <span>{!stats ? "crie a persona" : workLeft ? `em ${fmtWait(workLeft)}` : stats.energy < 15 ? "sem energia ⚡" : "−20 ⚡ · +XP"}</span>
+          </span>
+        </button>
+        <button type="button" className="casino-game g-shop" onClick={() => setOpen(hasPersona(wallet) ? "shops" : "create")} disabled={!wallet}>
+          <span className="cg-icon">🛍️</span>
+          <span className="cg-text">
+            <b>Lojas</b>
+            <span>comida, casa, carro…</span>
+          </span>
+        </button>
+        <button type="button" className="casino-game g-charity" onClick={() => setOpen(hasPersona(wallet) ? "charity" : "create")} disabled={!wallet}>
+          <span className="cg-icon">💝</span>
+          <span className="cg-text">
+            <b>Caridade</b>
+            <span>pontos sociais</span>
           </span>
         </button>
         <button type="button" className={"casino-game g-daily" + (canClaimDaily(wallet) ? " ready" : "")} onClick={doDaily} disabled={!wallet}>

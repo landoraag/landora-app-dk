@@ -183,3 +183,33 @@ tarefas que vencem hoje ou estão atrasadas. Opcional: variável `CRON_SECRET` n
 
 Financeiro → **Exportar Excel**: planilha com resumo por ciclo, lançamentos, vendas,
 assinaturas e clientes (gerada no navegador, sem biblioteca extra).
+
+## Música nas calls (ouvir junto)
+
+Dentro de uma call, botão **🎵 Música**: abre o painel com chat de links, fila, playlists e comandos.
+Cole um link do **YouTube** (vídeo ou playlist) ou do **Spotify** (música, álbum ou playlist), ou só
+escreva o nome da música. Digite `/ajuda` para ver todos os comandos (`/pular`, `/pausar`, `/agora`,
+`/proxima`, `/buscar`, `/ir 1:30`, `/loop`, `/misturar`, `/playlist salvar|tocar|add`, `/vol`…).
+
+Como funciona: ninguém transmite áudio. O Firestore guarda só a fila e o ponto da música
+(`calls/{id}/music/state`) e cada pessoa toca o vídeo no próprio aparelho, pelo player oficial do
+YouTube (a janelinha no canto). Por isso a música não passa pelo anti-ruído e cada um tem o próprio
+volume. Links do Spotify tocam a mesma música pelo YouTube (o Spotify não libera tocar as músicas
+dele em outros apps). Playlists próprias ficam em `musicPlaylists`.
+
+A busca e a leitura de links ficam em `api/music.js` (Vercel, sem chave nenhuma). Ela sobe junto com
+as outras funções quando a Vercel publica o repositório; não precisa configurar nada novo.
+
+## Economia: persona (RPG)
+
+No #economia cada pessoa cria uma **persona** (nome, avatar, classe e uma frase). O dinheiro passa a
+ter uso no dia a dia:
+
+- **Energia** (trabalhar gasta, comida repõe) e **humor** (lazer e caridade sobem; humor alto paga mais).
+- **Nível e XP**: salário maior a cada nível e itens melhores liberados.
+- **Lojas**: Mercado, Lazer, Escola (cursos), Imóveis, Veículos e Utilidades (alarme anti-roubo, pets).
+- **Caridade**: doações para as causas da cidade dão **pontos sociais**, que viram títulos e desconto
+  nas lojas. Roubar tira pontos sociais.
+- **Ranking** por riqueza, nível e pontos sociais.
+
+Tudo fica na própria carteira (`wallets/{uid}`) e o total de cada causa em `charity/{causa}`.

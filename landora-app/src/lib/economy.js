@@ -3,7 +3,8 @@
 // bagunçarem o saldo de ninguém.
 //
 // Regras (pensadas para ser justas):
-// - Trabalhar: a cada 1 h, ganha entre 🪙 100 e 🪙 250 (5% de chance de gorjeta: o triplo).
+// - Trabalhar: agora faz parte da vida da persona (lib/rpg.js): gasta energia e o salário depende
+//   do nível, da classe, dos cursos, do veículo e do humor.
 // - Bônus diário: 🪙 500 por dia (no cassino ou aqui).
 // - Banco: guardar e sacar é grátis. O que está no banco NÃO pode ser roubado, mas as apostas
 //   e pagamentos usam só a carteira.
@@ -17,7 +18,8 @@
 
 import { addDoc, collection, doc, getDocs, increment, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { START_BALANCE, rand, randInt, walletRef } from "./casino";
+import { START_BALANCE, rand, walletRef } from "./casino";
+import { ITEMS, hasPersona, robChanceFor, robSocialPenalty, workShift } from "./rpg";
 
 export const WORK_COOLDOWN = 60 * 60 * 1000;
 export const ROB_COOLDOWN = 2 * 60 * 60 * 1000;
@@ -28,20 +30,7 @@ export const LOAN_MAX = 3000;
 export const LOAN_INTEREST = 0.1;
 export const LOAN_DAYS = 3;
 
-const JOBS = [
-  ["fez uma landing page para uma padaria", "🥖"],
-  ["respondeu 40 leads no WhatsApp", "📱"],
-  ["arrumou o pixel de um cliente", "🧩"],
-  ["entregou panfletos no centro", "📄"],
-  ["editou um vídeo para o Instagram", "🎬"],
-  ["consertou o Wi-Fi do escritório", "📶"],
-  ["fez café para a equipe inteira", "☕"],
-  ["vendeu um plano anual", "💼"],
-  ["criou 12 artes para o feed", "🎨"],
-  ["passeou com o cachorro do vizinho", "🐕"],
-  ["lavou o carro do chefe", "🚗"],
-  ["organizou a planilha do financeiro", "📊"],
-];
+
 
 const num = (v) => Math.floor(Number(v) || 0);
 const whenText = (ms) => {
@@ -59,19 +48,8 @@ async function readWallet(tx, uid) {
 }
 
 /* ---------------- trabalhar ---------------- */
-export async function work(uid) {
-  return runTransaction(db, async (tx) => {
-    const w = await readWallet(tx, uid);
-    const left = cooldownLeft(w.lastWork, WORK_COOLDOWN);
-    if (left > 0) throw new Error(`Você está cansado. Pode trabalhar de novo em ${whenText(left)}.`);
-    const [job, emoji] = JOBS[randInt(JOBS.length)];
-    let amount = 100 + randInt(151);
-    const tip = rand() < 0.05;
-    if (tip) amount *= 3;
-    tx.update(walletRef(uid), { balance: w.balance + amount, lastWork: Date.now() });
-    return { amount, job, emoji, tip };
-  });
-}
+// Agora depende da persona (energia, nível, classe, cursos e veículo): veja lib/rpg.js.
+export const work = (uid) => workShift(uid);
 
 /* ---------------- banco ---------------- */
 export async function deposit(uid, amount) {
@@ -118,18 +96,25 @@ export async function rob(thiefUid, victimUid) {
     if (t.balance < ROB_MIN) throw new Error(`Você precisa de pelo menos 🪙 ${ROB_MIN} na carteira para tentar (caso precise pagar a multa).`);
     if ((v.robShieldUntil || 0) > Date.now()) throw new Error(`${v.nickname} foi roubado há pouco e está protegido por mais ${whenText(v.robShieldUntil - Date.now())}.`);
     if (v.balance < ROB_MIN) throw new Error(`${v.nickname} está com quase nada na carteira. Não vale o risco.`);
-    const ok = rand() < ROB_CHANCE;
+    if (!hasPersona(t)) throw new Error("Crie sua persona antes (no botão da persona, aqui em cima).");
+    const vName = v.persona?.name ? `${v.persona.name} (${v.nickname})` : v.nickname;
+    // Alarme da vítima: dispara, gasta 1 e o ladrão é pego.
+    const alarms = Math.floor(Number(v.inv?.alarme) || 0);
+    const alarm = alarms > 0;
+    const ok = !alarm && rand() < robChanceFor(t, v, ROB_CHANCE);
+    const shame = robSocialPenalty(t, ok);
+    const social = Math.floor(Number(t.social) || 0) - shame;
     if (ok) {
       const pct = 0.1 + rand() * 0.15;
       const amount = Math.max(1, Math.min(1500, Math.floor(v.balance * pct)));
-      tx.update(walletRef(thiefUid), { balance: t.balance + amount, lastRob: Date.now() });
+      tx.update(walletRef(thiefUid), { balance: t.balance + amount, lastRob: Date.now(), social });
       tx.update(walletRef(victimUid), { balance: v.balance - amount, robShieldUntil: Date.now() + ROB_SHIELD });
-      return { ok, amount, victim: v.nickname };
+      return { ok, amount, victim: vName, shame };
     }
     const fine = Math.min(1000, Math.max(50, Math.floor(t.balance * 0.2)), t.balance);
-    tx.update(walletRef(thiefUid), { balance: t.balance - fine, lastRob: Date.now() });
-    tx.update(walletRef(victimUid), { balance: v.balance + fine });
-    return { ok, amount: fine, victim: v.nickname };
+    tx.update(walletRef(thiefUid), { balance: t.balance - fine, lastRob: Date.now(), social });
+    tx.update(walletRef(victimUid), { balance: v.balance + fine, ...(alarm ? { "inv.alarme": alarms - 1 } : {}) });
+    return { ok, amount: fine, victim: vName, shame, alarm, alarmName: ITEMS.alarme.name };
   });
 }
 
@@ -246,6 +231,13 @@ export async function adminGiveAll(uids, amount) {
 }
 export async function adminResetAll(uids) {
   await Promise.all(
-    uids.map((u) => updateDoc(walletRef(u), { balance: START_BALANCE, bank: 0, wins: 0, losses: 0, biggestWin: 0, lastDaily: "", lastWork: 0, lastRob: 0, robShieldUntil: 0 }))
+    uids.map((u) =>
+      updateDoc(walletRef(u), {
+        balance: START_BALANCE, bank: 0, wins: 0, losses: 0, biggestWin: 0, lastDaily: "", lastWork: 0, lastRob: 0, robShieldUntil: 0,
+        // A persona continua (nome, avatar, classe), mas recomeça a vida do zero.
+        xp: 0, social: 0, donated: 0, spent: 0, energy: 100, energyAt: Date.now(), mood: 60, moodAt: Date.now(),
+        inv: {}, courses: {}, assets: {}, pets: {},
+      })
+    )
   );
 }

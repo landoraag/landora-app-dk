@@ -2108,3 +2108,203 @@ html { background-color: var(--black, #0a0a0a); }
   .casino-top { row-gap: 8px; }
   .eco-top-actions { width: 100%; }
 }
+
+/* ---------- Música nas calls ---------- */
+.call-main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+@media (min-width: 1100px) {
+  .call-main.with-music { flex-direction: row; align-items: stretch; }
+  .call-main.with-music .call-stage { min-width: 0; }
+  .call-main.with-music .music-panel { width: 380px; flex: none; max-height: calc(100vh - 230px); position: sticky; top: 0; }
+}
+.music-panel { display: flex; flex-direction: column; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; max-height: 70vh; min-height: 360px; }
+.music-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.music-head > b { font-family: var(--font-display); }
+.music-tabs { display: flex; gap: 4px; margin-right: auto; flex-wrap: wrap; }
+.music-tabs button { border: 1px solid var(--border); background: transparent; color: var(--gray-soft); border-radius: 999px; padding: 4px 10px; font-size: 0.76rem; cursor: pointer; }
+.music-tabs button.on { background: rgba(0,87,255,0.2); border-color: var(--blue-light); color: var(--text); }
+.music-now { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; background: linear-gradient(135deg, rgba(0,87,255,0.16), rgba(30,58,138,0.08)); border: 1px solid rgba(0,87,255,0.3); }
+.music-now-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.music-now-info b, .music-now-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-now-info b { font-size: 0.88rem; }
+.music-now-info span { font-size: 0.72rem; color: var(--gray-soft); }
+.music-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 4px; }
+.music-bar i { display: block; height: 100%; background: var(--gradient); transition: width 1s linear; }
+.music-now-ctrl { display: flex; gap: 4px; }
+.music-now-ctrl button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-size: 0.85rem; }
+.music-now-ctrl button.main { background: var(--gradient); border: none; width: 36px; height: 36px; }
+.music-now-ctrl button.lit { border-color: var(--blue-light); background: rgba(0,87,255,0.2); }
+.music-empty { margin: 0; padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.04); font-size: 0.84rem; color: var(--gray-soft); }
+.music-listen { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--gray-soft); }
+.music-listen input { flex: 1; }
+.music-listen .btn { width: 100%; }
+.music-body { flex: 1; overflow-y: auto; min-height: 120px; padding-right: 2px; }
+.music-feed { display: flex; flex-direction: column; gap: 6px; }
+.mf-row { font-size: 0.84rem; line-height: 1.4; display: flex; gap: 6px; flex-wrap: wrap; word-break: break-word; }
+.mf-row b { color: #93c5fd; }
+.mf-row.bot span { color: var(--gray-soft); }
+.mf-row.local span { color: #cbd5e1; font-style: italic; }
+.mf-row.bad span { color: #fca5a5; font-style: normal; }
+.music-results { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 12px; background: rgba(0,0,0,0.25); border: 1px solid var(--border); }
+.mr-head { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--gray-soft); }
+.mr-row, .mq-row { display: flex; align-items: center; gap: 8px; }
+.mr-info, .mq-info { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; background: none; border: none; color: var(--text); padding: 0; cursor: pointer; }
+.mr-info b, .mq-info b, .mr-info span, .mq-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mr-info b, .mq-info b { font-size: 0.82rem; font-weight: 600; }
+.mr-info span, .mq-info span { font-size: 0.7rem; color: var(--gray-soft); }
+.mr-row .btn { padding: 6px 10px; font-size: 0.76rem; }
+.mq-thumb { width: 48px; height: 36px; border-radius: 6px; object-fit: cover; flex: none; background: #000; }
+.mq-thumb.ph { display: grid; place-items: center; background: rgba(255,255,255,0.06); font-size: 1rem; }
+.music-queue { display: flex; flex-direction: column; gap: 4px; }
+.mq-row { padding: 5px; border-radius: 10px; }
+.mq-row:hover { background: rgba(255,255,255,0.04); }
+.mq-row.now { background: rgba(0,87,255,0.14); }
+.mq-row.done { opacity: 0.45; }
+.mq-n { width: 20px; text-align: center; font-size: 0.72rem; color: var(--gray-soft); flex: none; }
+.mq-act { display: flex; gap: 2px; }
+.mq-act button { width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent; color: var(--gray-soft); cursor: pointer; }
+.mq-act button:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.music-queue-foot { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
+.music-queue-foot .btn { padding: 6px 12px; font-size: 0.78rem; }
+.btn-ghost.danger { color: #fca5a5; border-color: rgba(239,68,68,0.4); }
+.music-help { display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; }
+.music-help div { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.music-help code { background: rgba(0,87,255,0.15); color: #bfdbfe; padding: 2px 6px; border-radius: 6px; font-size: 0.76rem; }
+.music-help span { color: var(--gray-soft); }
+.music-help p { margin-top: 6px; font-size: 0.76rem; }
+.music-input { display: flex; gap: 6px; }
+.music-input input { flex: 1; min-width: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); }
+.music-input input:focus { outline: none; border-color: var(--blue-light); }
+.music-input .btn { padding: 8px 14px; }
+.music-pl { display: flex; flex-direction: column; gap: 8px; }
+.pl-add { display: flex; gap: 6px; flex-wrap: wrap; }
+.pl-add input { flex: 1 1 160px; min-width: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; color: var(--text); }
+.pl-add .btn { padding: 7px 10px; font-size: 0.78rem; }
+.pl-row { display: flex; align-items: center; gap: 6px; }
+.pl-row .btn { padding: 6px 12px; }
+.pl-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 8px; color: var(--text); cursor: pointer; text-align: left; }
+.pl-open:hover { border-color: var(--blue-light); }
+.pl-ico { font-size: 1.3rem; }
+.pl-info { display: flex; flex-direction: column; min-width: 0; }
+.pl-info b { font-size: 0.86rem; }
+.pl-info span { font-size: 0.7rem; color: var(--gray-soft); }
+.pl-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+.pl-head > div:first-child { display: flex; flex-direction: column; }
+.pl-head span { font-size: 0.72rem; color: var(--gray-soft); }
+.pl-head-act { display: flex; gap: 6px; }
+.pl-head-act .btn { padding: 7px 12px; }
+
+/* player (janelinha no canto) */
+.music-mini { position: fixed; right: 16px; bottom: 90px; z-index: 30; width: 280px; background: #0b1120; border: 1px solid rgba(0,87,255,0.35); border-radius: 14px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.55); animation: item-soft .25s ease; }
+.music-mini.compact { width: 200px; }
+.music-mini-video { position: relative; aspect-ratio: 16 / 9; background: #000; }
+.music-mini-host, .music-mini-host iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.music-tap { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; padding: 8px 14px; border: none; border-radius: 999px; background: var(--gradient); color: white; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.5); }
+.music-mini-info { display: flex; flex-direction: column; padding: 6px 10px 0; min-width: 0; }
+.music-mini-info b { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-mini-info span { font-size: 0.66rem; color: var(--gray-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-mini-ctrl { display: flex; align-items: center; gap: 4px; padding: 6px 8px 8px; }
+.music-mini-ctrl button { width: 28px; height: 28px; flex: none; border-radius: 8px; border: none; background: rgba(255,255,255,0.07); color: var(--text); cursor: pointer; font-size: 0.8rem; }
+.music-mini-ctrl button:hover { background: rgba(255,255,255,0.14); }
+.music-mini-ctrl input { flex: 1; min-width: 0; }
+.music-mini.compact .music-mini-ctrl input { display: none; }
+@media (max-width: 899px) {
+  .music-mini { right: 8px; bottom: calc(var(--bottom-nav-h, 64px) + env(safe-area-inset-bottom, 0px) + 60px); width: 220px; }
+  .music-mini.compact { width: 170px; }
+  .music-panel { max-height: 75vh; }
+}
+html.has-pseudo-fs .music-mini { display: none; }
+
+/* ---------- Persona (RPG da economia) ---------- */
+.eco-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) and (min-width: 900px) { .eco-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.casino-game.g-shop { --g1: #4a2a10; --g2: #24140a; --g3: rgba(249,115,22,0.28); }
+.casino-game.g-charity { --g1: #4a1636; --g2: #240a1a; --g3: rgba(244,114,182,0.3); }
+.rpg-ava { display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; font-size: 1.5rem; background: linear-gradient(135deg, rgba(0,87,255,0.35), rgba(30,58,138,0.25)); border: 1px solid rgba(0,87,255,0.4); }
+.rpg-ava.big { width: 58px; height: 58px; font-size: 2.1rem; border-radius: 16px; }
+.rpg-ava.sm { width: 30px; height: 30px; font-size: 1.1rem; border-radius: 9px; }
+.rpg-strip, .rpg-cta { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border-radius: 14px; border: 1px solid rgba(0,87,255,0.3); background: rgba(10,16,30,0.6); color: var(--text); cursor: pointer; transition: border-color .2s, transform .15s; }
+.rpg-strip:hover, .rpg-cta:hover { border-color: var(--blue-light); }
+.rpg-strip:active, .rpg-cta:active { transform: scale(.99); }
+.rpg-cta { border-style: dashed; animation: casino-pulse 2.4s ease-in-out infinite; }
+.rpg-cta-ico { font-size: 1.7rem; }
+.rpg-cta > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.rpg-cta > span:last-child span { font-size: 0.74rem; color: var(--gray-soft); }
+.rpg-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rpg-who b { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rpg-who > span { font-size: 0.7rem; color: var(--gray-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rpg-xp { display: block; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.rpg-xp.big { height: 8px; }
+.rpg-xp i { display: block; height: 100%; background: linear-gradient(90deg, #a855f7, #0057ff); }
+.rpg-meters { display: flex; flex-direction: column; gap: 3px; width: 150px; flex: none; }
+.rpg-meter { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; }
+.rpg-meter > span { min-width: 16px; color: var(--gray-soft); white-space: nowrap; }
+.rpg-meter > div { flex: 1; height: 6px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.rpg-meter i { display: block; height: 100%; transition: width .4s; }
+.rpg-meter.m-energy i { background: linear-gradient(90deg, #f59e0b, #fde047); }
+.rpg-meter.m-mood i { background: linear-gradient(90deg, #ec4899, #f9a8d4); }
+.rpg-meter b { min-width: 26px; text-align: right; font-size: 0.72rem; }
+.rpg-social { flex: none; font-size: 0.78rem; font-weight: 700; padding: 4px 8px; border-radius: 999px; background: rgba(34,197,94,0.15); color: #86efac; }
+@media (max-width: 899px) {
+  .rpg-meters { width: 110px; }
+  .rpg-social { display: none; }
+}
+.rpg-form-top { display: flex; gap: 10px; align-items: center; }
+.rpg-emojis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.rpg-emojis button { aspect-ratio: 1; border-radius: 10px; border: 1px solid transparent; background: rgba(255,255,255,0.05); font-size: 1.2rem; cursor: pointer; }
+.rpg-emojis button.sel { border-color: var(--blue-light); background: rgba(0,87,255,0.25); }
+.rpg-classes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.rpg-class { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer; }
+.rpg-class.sel { border-color: var(--blue-light); background: rgba(0,87,255,0.2); }
+.rpg-class-ico { font-size: 1.3rem; }
+.rpg-class b { font-size: 0.86rem; }
+.rpg-class span:last-child { font-size: 0.72rem; color: var(--gray-soft); }
+.rpg-sheet-head { display: flex; align-items: center; gap: 12px; }
+.rpg-sheet-head > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rpg-sheet-head h3 { font-size: 1.15rem; }
+.rpg-sheet-head span { font-size: 0.78rem; color: var(--gray-soft); }
+.rpg-sheet-head em { font-size: 0.78rem; color: rgba(255,255,255,0.7); }
+.rpg-sheet-head .btn { padding: 6px 12px; font-size: 0.8rem; }
+.rpg-level > div:first-child { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px; }
+.rpg-level span { color: var(--gray-soft); }
+.rpg-stats { display: flex; flex-direction: column; gap: 6px; }
+.rpg-stats .rpg-meter { font-size: 0.8rem; }
+.rpg-stats .rpg-meter > span { min-width: 80px; }
+.rpg-stats .rpg-meter > div { height: 9px; }
+.rpg-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.rpg-facts div { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,0.25); }
+.rpg-facts span { font-size: 0.66rem; color: var(--gray-soft); }
+.rpg-facts b { font-size: 0.86rem; }
+@media (max-width: 520px) { .rpg-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rpg-assets { display: flex; flex-wrap: wrap; gap: 6px; }
+.rpg-assets span { font-size: 0.78rem; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,0.06); }
+.rpg-inv, .rpg-items { display: flex; flex-direction: column; gap: 6px; }
+.rpg-inv-item, .rpg-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
+.rpg-item.locked { opacity: .55; }
+.rpg-inv-ico, .rpg-item-ico { font-size: 1.6rem; flex: none; width: 34px; text-align: center; }
+.rpg-inv-name, .rpg-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.rpg-inv-name b, .rpg-item-info b { font-size: 0.86rem; }
+.rpg-inv-name span, .rpg-item-info span { font-size: 0.72rem; color: var(--gray-soft); }
+.rpg-item-info em { font-style: normal; font-weight: 700; font-size: 0.8rem; color: #fde68a; }
+.rpg-item-info s { margin-left: 6px; color: var(--gray-soft); font-weight: 400; font-size: 0.72rem; }
+.rpg-item-act { display: flex; gap: 4px; flex: none; }
+.rpg-item-act .btn, .rpg-inv-item .btn { padding: 7px 12px; font-size: 0.8rem; }
+.rpg-lock { font-size: 0.72rem; color: var(--gray-soft); white-space: nowrap; }
+.rpg-shop-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; margin-bottom: 8px; }
+.rpg-shop-tabs::-webkit-scrollbar { display: none; }
+.rpg-shop-tabs button { flex: none; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
+.rpg-shop-tabs button.on { border-color: var(--blue-light); background: rgba(0,87,255,0.22); }
+.rpg-causes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.rpg-cause { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer; }
+.rpg-cause.sel { border-color: #f472b6; background: rgba(244,114,182,0.14); }
+.rpg-cause-ico { font-size: 1.3rem; }
+.rpg-cause b { font-size: 0.84rem; }
+.rpg-cause span:not(.rpg-cause-ico) { font-size: 0.7rem; color: var(--gray-soft); }
+.rpg-cause em { font-style: normal; font-size: 0.72rem; color: #86efac; margin-top: 2px; }
+.rpg-titles { display: flex; flex-direction: column; gap: 4px; }
+.rpg-titles span { font-size: 0.78rem; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,0.03); color: var(--gray-soft); }
+.rpg-titles span.got { color: var(--text); }
+.rpg-titles span.on { color: var(--text); background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); }
+.rpg-titles small { color: var(--gray-soft); margin-left: 4px; }
+.casino-result small { display: block; font-size: 0.72rem; opacity: .8; }
+.game-card.t-charity { border-color: rgba(244,114,182,0.4); }
+.game-card.t-levelup { border-color: rgba(168,85,247,0.5); background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(0,87,255,0.1)); }
