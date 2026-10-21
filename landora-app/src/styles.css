@@ -2289,7 +2289,7 @@ html.has-pseudo-fs .music-mini { display: none; }
 .rpg-item-act { display: flex; gap: 4px; flex: none; }
 .rpg-item-act .btn, .rpg-inv-item .btn { padding: 7px 12px; font-size: 0.8rem; }
 .rpg-lock { font-size: 0.72rem; color: var(--gray-soft); white-space: nowrap; }
-.rpg-shop-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; margin-bottom: 8px; }
+.rpg-shop-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 2px; margin-bottom: 8px; }
 .rpg-shop-tabs::-webkit-scrollbar { display: none; }
 .rpg-shop-tabs button { flex: none; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
 .rpg-shop-tabs button.on { border-color: var(--blue-light); background: rgba(0,87,255,0.22); }
