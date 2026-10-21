@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCollection } from "../lib/useCollection";
 import Avatar from "./Avatar";
 import { CreateTable } from "./Tables";
+import { MORE_GAMES } from "./CasinoMore";
 import {
   CHICKEN_LEVELS,
   COINFLIP_PAYOUT,
@@ -45,7 +46,7 @@ export function useWallet() {
 }
 
 // Começa e termina uma rodada: tira a aposta, paga o prêmio e publica no #cassino.
-function useRound() {
+export function useRound() {
   const { user, profile } = useAuth();
   return {
     start: (bet) => placeBet(user.uid, bet),
@@ -616,6 +617,7 @@ const GAMES = [
   { id: "chicken", name: "Galinha", icon: "🐔", desc: "Atravesse a estrada", C: Chicken },
   { id: "coinflip", name: "Cara ou coroa", icon: "💰", desc: "50% de chance", C: Coinflip },
   { id: "roulette", name: "Roleta russa", icon: "🔫", desc: "1 bala em 6", C: Roulette },
+  ...MORE_GAMES,
 ];
 
 export function CasinoBar() {

@@ -2439,3 +2439,75 @@ html.has-pseudo-fs .telao-stage.is-fs { position: fixed; inset: 0; z-index: 1000
 .work-grid button.bad { background: rgba(239,68,68,0.3); border-color: rgba(239,68,68,0.7); animation: work-shake 0.3s; }
 @keyframes work-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 .work-feedback { padding: 36px 0; text-align: center; font-size: 1.25rem; font-weight: 800; }
+
+/* ---------------- jogos extras do cassino ---------------- */
+.casino-game.g-mines { --g1: #0f3b3f; --g2: #091f22; --g3: rgba(20,184,166,0.28); }
+.casino-game.g-dice { --g1: #3a1d5c; --g2: #1c0e2e; --g3: rgba(168,85,247,0.3); }
+.casino-game.g-slots { --g1: #5c1d3a; --g2: #2e0e1c; --g3: rgba(244,63,94,0.3); }
+.casino-game.g-scratch { --g1: #4d4a14; --g2: #26250a; --g3: rgba(234,179,8,0.3); }
+.casino-game.g-hilo { --g1: #1f3a5f; --g2: #0e1c30; --g3: rgba(56,189,248,0.28); }
+.casino-game.g-tower { --g1: #4a2f1a; --g2: #26180d; --g3: rgba(249,115,22,0.28); }
+@media (max-width: 640px) { .casino-games { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.game .btn small { display: block; font-size: 0.68rem; font-weight: 600; opacity: 0.85; }
+
+/* Minas */
+.mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.mine-cell { aspect-ratio: 1; display: grid; place-items: center; font-size: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: linear-gradient(160deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); color: var(--text); cursor: pointer; transition: transform .12s, background .2s; }
+.mine-cell:hover:not(:disabled) { transform: translateY(-2px); background: rgba(255,255,255,0.16); }
+.mine-cell:disabled { cursor: default; }
+.mine-cell.safe { background: rgba(20,184,166,0.22); border-color: rgba(20,184,166,0.6); animation: mine-pop .25s; }
+.mine-cell.mine { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); opacity: .75; }
+.mine-cell.boom { background: rgba(239,68,68,0.4); border-color: rgba(239,68,68,0.9); animation: work-shake .35s; }
+@keyframes mine-pop { 0% { transform: scale(.7); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+.mines-next { flex: 1 1 0; min-width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; background: rgba(255,255,255,0.05); font-size: 0.72rem; color: var(--gray-soft); }
+.mines-next b { font-size: 1.05rem; color: #fde68a; }
+
+/* Dados */
+.dice-number { text-align: center; font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums; padding: 6px 0; letter-spacing: 0.02em; }
+.dice-number.win { color: #4ade80; text-shadow: 0 0 18px rgba(74,222,128,0.5); }
+.dice-number.lose { color: #f87171; }
+.dice-track { position: relative; height: 14px; border-radius: 999px; background: rgba(239,68,68,0.35); overflow: visible; }
+.dice-zone { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: rgba(34,197,94,0.75); }
+.dice-pin { position: absolute; top: -5px; width: 4px; height: 24px; margin-left: -2px; border-radius: 2px; background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8); transition: left .07s linear; }
+.dice-slider { display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; }
+.dice-slider span b { color: #fde68a; }
+.dice-slider input[type="range"] { width: 100%; accent-color: #3b82f6; }
+.dice-slider small { text-align: center; color: var(--gray-soft); }
+
+/* Caça-níquel */
+.slots-machine { display: flex; justify-content: center; gap: 10px; padding: 14px; border-radius: 18px; background: linear-gradient(180deg, #3a0f1e, #1a0910); border: 2px solid rgba(251,191,36,0.5); box-shadow: inset 0 0 24px rgba(0,0,0,0.6), 0 0 22px rgba(244,63,94,0.2); }
+.slots-reel { display: grid; place-items: center; width: 84px; height: 96px; font-size: 3rem; border-radius: 12px; background: linear-gradient(180deg, #f8fafc, #cbd5e1 45%, #f8fafc); box-shadow: inset 0 6px 10px rgba(0,0,0,0.25), inset 0 -6px 10px rgba(0,0,0,0.25); }
+.slots-reel.spin { filter: blur(1.2px); }
+.slots-pay { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; font-size: 0.74rem; color: var(--gray-soft); }
+.slots-pay b { color: #fde68a; margin-left: 2px; }
+
+/* Raspadinha */
+.scratch-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; border-radius: 16px; background: linear-gradient(135deg, #4d4a14, #26250a); border: 1px solid rgba(234,179,8,0.45); }
+.scratch-cell { height: 72px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: repeating-linear-gradient(45deg, #94a3b8, #94a3b8 6px, #a8b4c4 6px, #a8b4c4 12px); color: #1e293b; font-size: 1.6rem; font-weight: 800; cursor: pointer; transition: transform .12s; }
+.scratch-cell:hover:not(:disabled) { transform: scale(1.04); }
+.scratch-cell.open { background: rgba(255,255,255,0.08); color: var(--text); font-size: 1.35rem; animation: mine-pop .25s; cursor: default; }
+.scratch-cell.hit { background: rgba(250,204,21,0.25); border-color: #facc15; color: #fde68a; box-shadow: 0 0 14px rgba(250,204,21,0.5); }
+
+/* Mais ou menos */
+.hilo-table { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 8px; border-radius: 16px; background: radial-gradient(120% 90% at 50% 0%, #1b4a78, #0c2038); min-height: 190px; justify-content: center; }
+.hilo-history { display: flex; gap: 6px; font-size: 0.78rem; font-weight: 700; }
+.hilo-history span { padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,0.1); color: #e2e8f0; }
+.hilo-history span.red { color: #fca5a5; }
+.hilo-empty { font-size: 3rem; }
+.hilo-mult { font-weight: 800; color: #fde68a; }
+.game-actions .btn { line-height: 1.2; }
+
+/* Torre */
+.tower-rows { display: flex; flex-direction: column; gap: 5px; }
+.tower-row { display: flex; align-items: center; gap: 8px; opacity: .5; }
+.tower-row.cur { opacity: 1; }
+.tower-row.passed, .tower-row.died { opacity: .9; }
+.tower-x { width: 52px; flex: none; font-size: 0.72rem; font-weight: 700; color: #fde68a; text-align: right; }
+.tower-tiles { flex: 1; display: grid; gap: 6px; }
+.tower-tile { height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: var(--text); font-size: 1rem; cursor: default; }
+.tower-row.cur .tower-tile { background: rgba(59,130,246,0.22); border-color: rgba(96,165,250,0.6); cursor: pointer; }
+.tower-row.cur .tower-tile:hover:not(:disabled) { background: rgba(59,130,246,0.4); }
+.tower-tile.safe { background: rgba(34,197,94,0.25); border-color: rgba(34,197,94,0.6); }
+.tower-tile.mine { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); }
+.tower-tile.boom { background: rgba(239,68,68,0.4); border-color: rgba(239,68,68,0.9); animation: work-shake .35s; }

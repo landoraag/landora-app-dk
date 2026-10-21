@@ -171,6 +171,12 @@ export const GAME_NAMES = {
   chicken: "🐔 Galinha",
   coinflip: "💰 Cara ou coroa",
   roulette: "🔫 Roleta russa",
+  mines: "💣 Minas",
+  dice: "🎲 Dados",
+  slots: "🎰 Caça-níquel",
+  scratch: "🎫 Raspadinha",
+  hilo: "📈 Mais ou menos",
+  tower: "🗼 Torre",
   daily: "🎁 Bônus diário",
   work: "💼 Trabalho",
   rob: "🕵️ Roubo",
@@ -246,3 +252,122 @@ export const COINFLIP_PAYOUT = 1.96;
 export const ROULETTE_CHAMBERS = 6;
 export const rouletteMultiplier = (survived) =>
   survived <= 0 ? 1 : Math.floor(((EDGE * ROULETTE_CHAMBERS) / (ROULETTE_CHAMBERS - survived)) * 100) / 100;
+
+/* ---------------- jogos novos: regras e probabilidades ---------------- */
+// Todos pagam em média ~94-97% do que se aposta (a casa fica com 3-6%). `payout` é sempre o que
+// volta para a carteira, já incluindo a aposta (como no resto do cassino).
+// (usa a EDGE de cima: 3% fica com a casa)
+
+// 💣 Minas: grade 5x5 com N minas escondidas. Cada casa segura aumenta o prêmio; saque quando quiser.
+export const MINES_SIZE = 25;
+export const MINES_OPTIONS = [1, 3, 5, 10];
+export function minesMultiplier(mines, picks) {
+  let m = EDGE;
+  for (let i = 0; i < picks; i++) m *= (MINES_SIZE - i) / (MINES_SIZE - mines - i);
+  return m;
+}
+export function placeMines(mines) {
+  const cells = Array.from({ length: MINES_SIZE }, (_, i) => i);
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = randInt(i + 1);
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return new Set(cells.slice(0, mines));
+}
+
+// 🎲 Dados: sorteia de 0,00 a 99,99. "Abaixo": ganha se sair menos que a chance. "Acima": ganha se
+// sair 100 menos a chance ou mais. Quanto menor a chance, maior o prêmio.
+export const DICE_MIN = 2;
+export const DICE_MAX = 95;
+export const diceMultiplier = (chance) => (EDGE * 100) / chance;
+export function rollDice() {
+  return randInt(10000) / 100;
+}
+export const diceWins = (roll, chance, dir) => (dir === "under" ? roll < chance : roll >= 100 - chance);
+
+// 🎰 Caça-níquel: 3 rolos. Três iguais pagam o valor do símbolo; só dois iguais pagam 1,2x.
+export const SLOT_SYMBOLS = [
+  { s: "🍒", w: 30, x: 5 },
+  { s: "🍋", w: 24, x: 8 },
+  { s: "🍉", w: 18, x: 12 },
+  { s: "🔔", w: 12, x: 20 },
+  { s: "⭐", w: 8, x: 40 },
+  { s: "🍀", w: 5, x: 80 },
+  { s: "💎", w: 3, x: 150 },
+];
+export const SLOT_PAIR_X = 1.2;
+export function spinSlotReel() {
+  let r = randInt(100);
+  for (const sym of SLOT_SYMBOLS) {
+    if (r < sym.w) return sym.s;
+    r -= sym.w;
+  }
+  return SLOT_SYMBOLS[0].s;
+}
+export function slotsMultiplier(reels) {
+  const [a, b, c] = reels;
+  if (a === b && b === c) return SLOT_SYMBOLS.find((x) => x.s === a).x;
+  if (a === b || b === c || a === c) return SLOT_PAIR_X;
+  return 0;
+}
+
+// 🎫 Raspadinha: 6 casas. Três valores iguais ganham aquele valor da aposta. O resultado é sorteado
+// antes e a cartela é montada de acordo (nunca sobra um segundo trio por acaso).
+export const SCRATCH_PRIZES = [
+  { x: 2, p: 0.11 },
+  { x: 5, p: 0.045 },
+  { x: 10, p: 0.018 },
+  { x: 25, p: 0.007 },
+  { x: 100, p: 0.0012 },
+];
+export const SCRATCH_CELLS = 6;
+export function scratchCard() {
+  let r = rand();
+  let win = 0;
+  for (const pr of SCRATCH_PRIZES) {
+    if (r < pr.p) {
+      win = pr.x;
+      break;
+    }
+    r -= pr.p;
+  }
+  const values = SCRATCH_PRIZES.map((p) => p.x);
+  const count = {};
+  const cells = [];
+  if (win) {
+    for (let i = 0; i < 3; i++) cells.push(win);
+    count[win] = 3;
+  }
+  while (cells.length < SCRATCH_CELLS) {
+    const v = values[randInt(values.length)];
+    if ((count[v] || 0) >= 2) continue;
+    count[v] = (count[v] || 0) + 1;
+    cells.push(v);
+  }
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = randInt(i + 1);
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return { cells, win };
+}
+
+// 📈 Mais ou menos: a próxima carta é maior ou menor? Empate perde. Cada acerto multiplica o prêmio
+// pela chance daquele palpite (com a margem da casa). Saque quando quiser.
+export const HILO_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+export const hiloChance = (rank, dir) => (dir === "high" ? 13 - rank : rank - 1) / 13; // rank 1..13
+// hiloStep: quanto o palpite multiplica o prêmio bruto (1 / chance). A margem da casa entra uma
+// vez só, no total (hiloPay), como nos outros jogos de sacar.
+export const hiloStep = (rank, dir) => 1 / hiloChance(rank, dir);
+export const hiloPay = (raw, streak) => (streak > 0 ? EDGE * raw : 1);
+export function drawHiloRank() {
+  return 1 + randInt(13);
+}
+
+// 🗼 Torre: em cada andar escolha 1 entre N casas; uma tem bomba. Sobe até o topo ou saque antes.
+export const TOWER_LEVELS = 8;
+export const TOWER_MODES = {
+  facil: { label: "Fácil", tiles: 4 },
+  medio: { label: "Médio", tiles: 3 },
+  dificil: { label: "Difícil", tiles: 2 },
+};
+export const towerMultiplier = (mode, floors) => EDGE * Math.pow(TOWER_MODES[mode].tiles / (TOWER_MODES[mode].tiles - 1), floors);
