@@ -614,7 +614,7 @@ export function Ranking() {
 const GAMES = [
   { id: "blackjack", name: "Blackjack", icon: "🃏", desc: "Chegue a 21", C: Blackjack },
   { id: "chicken", name: "Galinha", icon: "🐔", desc: "Atravesse a estrada", C: Chicken },
-  { id: "coinflip", name: "Cara ou coroa", icon: "🪙", desc: "50% de chance", C: Coinflip },
+  { id: "coinflip", name: "Cara ou coroa", icon: "💰", desc: "50% de chance", C: Coinflip },
   { id: "roulette", name: "Roleta russa", icon: "🔫", desc: "1 bala em 6", C: Roulette },
 ];
 

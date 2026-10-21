@@ -170,7 +170,7 @@ function Rob({ wallet, people, wallets, onMsg }) {
     setBusy(true);
     setRes(null);
     try {
-      await new Promise((r) => setTimeout(r, 900)); // suspense 🥷
+      await new Promise((r) => setTimeout(r, 900)); // suspense 🕵️
       const r = await rob(user.uid, to);
       setRes(r);
       post(user, profile, {
@@ -183,7 +183,7 @@ function Rob({ wallet, people, wallets, onMsg }) {
       notify({
         kind: "mention",
         title: r.ok
-          ? `🦹 ${profile?.nickname} te roubou ${coins(r.amount)}!`
+          ? `🕵️ ${profile?.nickname} te roubou ${coins(r.amount)}!`
           : r.alarm
             ? `🚨 Seu alarme pegou ${profile?.nickname}! Você recebeu ${coins(r.amount)} de multa`
             : `🚓 ${profile?.nickname} tentou te roubar e pagou ${coins(r.amount)} de multa para você`,
@@ -211,12 +211,12 @@ function Rob({ wallet, people, wallets, onMsg }) {
         <>
           <PersonPicker people={people} value={to} onChange={setTo} wallets={wallets} />
           <button type="button" className="btn btn-danger-solid game-go" disabled={busy || !to} onClick={go}>
-            {busy ? "Tentando… 🥷" : "Tentar roubar"}
+            {busy ? "Tentando… 🕵️" : "Tentar roubar"}
           </button>
         </>
       )}
       <p className="game-hint">
-        {Math.round(ROB_CHANCE * 100)}% de chance (Malandro +10%, contra cachorro de guarda −15%, alarme bloqueia) · leva 10–25% da carteira (máx. 🪙 1.500) · falhou: multa de 20% da sua carteira para a vítima · a cada 2 h · suja sua fama
+        {Math.round(ROB_CHANCE * 100)}% de chance (Malandro +10%, contra cachorro de guarda −15%, alarme bloqueia) · leva 10–25% da carteira (máx. 💰 1.500) · falhou: multa de 20% da sua carteira para a vítima · a cada 2 h · suja sua fama
       </p>
     </div>
   );
@@ -262,7 +262,7 @@ function Loans({ people, onMsg }) {
         Pedir {coins(v)} · devolve {coins(Math.ceil(v * (1 + LOAN_INTEREST)))}
       </button>
       <p className="game-hint">
-        Até 🪙 {LOAN_MAX.toLocaleString("pt-BR")} · juros de {Math.round(LOAN_INTEREST * 100)}% · prazo de {LOAN_DAYS} dias · venceu, quem emprestou pode cobrar (sai até do banco)
+        Até 💰 {LOAN_MAX.toLocaleString("pt-BR")} · juros de {Math.round(LOAN_INTEREST * 100)}% · prazo de {LOAN_DAYS} dias · venceu, quem emprestou pode cobrar (sai até do banco)
       </p>
     </div>
   );
@@ -393,20 +393,20 @@ export function LoanCard({ id }) {
 function Rules() {
   return (
     <div className="eco-rules">
-      <p>Moedas de mentira, só para diversão. Todo mundo começa com 🪙 22.000 e cria uma persona que vive na cidade.</p>
+      <p>Moedas de mentira, só para diversão. Todo mundo começa com 💰 22.000 e cria uma persona que vive na cidade.</p>
       <ul>
-        <li><b>🧑 Persona</b> — nome, avatar e classe. Cada classe tem um bônus (salário, XP, desconto, caridade, roubo…). Trocar de classe custa 🪙 1.000.</li>
+        <li><b>🧑 Persona</b> — nome, avatar e classe. Cada classe tem um bônus (salário, XP, desconto, caridade, roubo…). Trocar de classe custa 💰 1.000.</li>
         <li><b>⭐ Nível</b> — trabalhar, estudar, viajar e doar dá XP. Cada nível aumenta o salário em 6% e libera itens melhores. Subiu: prêmio em moedas e energia cheia.</li>
         <li><b>⚡ Energia</b> — cada turno de trabalho gasta 6. Volta sozinha (+10 por hora) ou comendo no Mercado. Energia baixa reduz o salário (até −25%), mas nunca impede de trabalhar.</li>
         <li><b>😊 Humor</b> — cai 1 por hora e sobe com lazer, caridade e compras grandes. Humor 0 paga 80% do salário; humor 100 paga 120%.</li>
-        <li><b>💼 Trabalhar</b> — é um minigame: cada turno tem 5 tarefas (troco, digitação, memória, ordenar preços). Fez certo, ganha mais (até 150% do salário); meio errado, ganha menos; tudo errado paga só 30%. Sem espera: trabalhe o quanto quiser. O salário base é de 🪙 100 a 🪙 250 vezes o seu bônus (nível, classe, cursos, veículo, humor e energia). Turno perfeito tem 10% de chance de gorjeta (o dobro).</li>
+        <li><b>💼 Trabalhar</b> — é um minigame: cada turno tem 5 tarefas (troco, digitação, memória, ordenar preços). Fez certo, ganha mais (até 150% do salário); meio errado, ganha menos; tudo errado paga só 30%. Sem espera: trabalhe o quanto quiser. O salário base é de 💰 100 a 💰 250 vezes o seu bônus (nível, classe, cursos, veículo, humor e energia). Turno perfeito tem 10% de chance de gorjeta (o dobro).</li>
         <li><b>🛍️ Lojas</b> — Mercado (energia), Lazer (humor), Escola (+10% de salário por curso), Imóveis (energia máxima e humor mínimo), Veículos (mais salário), Utilidades (alarme e pets) e Visual (molduras para o avatar, tags junto ao nome e cores de nome). Trocar de casa ou carro vende o antigo pela metade.</li>
-        <li><b>💝 Caridade</b> — doe para as causas da cidade: 1 ponto social a cada 🪙 10, mais XP e humor. Pontos sociais dão títulos e descontos de até 15% nas lojas.</li>
-        <li><b>🎁 Bônus diário</b> — 🪙 {DAILY_AMOUNT} uma vez por dia.</li>
+        <li><b>💝 Caridade</b> — doe para as causas da cidade: 1 ponto social a cada 💰 10, mais XP e humor. Pontos sociais dão títulos e descontos de até 15% nas lojas.</li>
+        <li><b>🎁 Bônus diário</b> — 💰 {DAILY_AMOUNT} uma vez por dia.</li>
         <li><b>🏦 Banco</b> — guardar e sacar é grátis. O banco não pode ser roubado; apostas, compras e pagamentos usam só a carteira.</li>
         <li><b>💸 Pagar</b> — manda moedas da sua carteira para alguém.</li>
-        <li><b>🦹 Roubar</b> — a cada 2 h. 45% de chance: leva de 10% a 25% da carteira da vítima (máx. 🪙 1.500). Se falhar, paga multa para a vítima. Roubar tira pontos sociais (−15 se der certo, −5 se falhar; Malandro perde o dobro). Fama baixa deixa tudo mais caro.</li>
-        <li><b>🤝 Empréstimo</b> — peça até 🪙 {LOAN_MAX.toLocaleString("pt-BR")} para alguém. Se aceitar, devolve com 10% de juros em até {LOAN_DAYS} dias. Venceu: quem emprestou pode cobrar, tirando da carteira e do banco.</li>
+        <li><b>🕵️ Roubar</b> — a cada 2 h. 45% de chance: leva de 10% a 25% da carteira da vítima (máx. 💰 1.500). Se falhar, paga multa para a vítima. Roubar tira pontos sociais (−15 se der certo, −5 se falhar; Malandro perde o dobro). Fama baixa deixa tudo mais caro.</li>
+        <li><b>🤝 Empréstimo</b> — peça até 💰 {LOAN_MAX.toLocaleString("pt-BR")} para alguém. Se aceitar, devolve com 10% de juros em até {LOAN_DAYS} dias. Venceu: quem emprestou pode cobrar, tirando da carteira e do banco.</li>
         <li><b>🎰 Cassino</b> — no #cassino: jogos contra a casa e desafios entre vocês.</li>
       </ul>
     </div>
@@ -520,7 +520,7 @@ export function EconomyBar() {
   const MODALS = {
     bank: ["🏦 Banco", <Bank key="b" wallet={wallet} onMsg={say} />],
     pay: ["💸 Pagar alguém", <Pay key="p" wallet={wallet} people={people} onMsg={say} />],
-    rob: ["🦹 Roubar", <Rob key="r" wallet={wallet} people={people} wallets={wallets} onMsg={say} />],
+    rob: ["🕵️ Roubar", <Rob key="r" wallet={wallet} people={people} wallets={wallets} onMsg={say} />],
     loans: ["🤝 Empréstimos", <Loans key="l" people={people} onMsg={say} />],
     rules: ["📜 Regras da economia", <Rules key="u" />],
     ranking: ["🏆 Ranking", <EcoRanking key="k" />],
@@ -604,7 +604,7 @@ export function EconomyBar() {
           </span>
         </button>
         <button type="button" className="casino-game g-rob" onClick={() => setOpen("rob")}>
-          <span className="cg-icon">🦹</span>
+          <span className="cg-icon">🕵️</span>
           <span className="cg-text">
             <b>Roubar</b>
             <span>{robLeft ? `em ${fmtWait(robLeft)}` : "45% de chance"}</span>

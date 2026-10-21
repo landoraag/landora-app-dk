@@ -100,7 +100,7 @@ function TrocoTask({ n, onDone }) {
     return diff === 0 ? 1 : diff <= 2 ? 0.5 : 0;
   };
   return (
-    <TaskShell n={n} title="🧾 Caixa" seconds={25} hint="Calcule o troco do cliente." onTimeout={() => finish(grade())}>
+    <TaskShell n={n} title="💵 Caixa" seconds={25} hint="Calcule o troco do cliente." onTimeout={() => finish(grade())}>
       <div className="work-card">
         <p>
           O cliente levou 3 itens: <b>R$ {t.items[0]}</b>, <b>R$ {t.items[1]}</b> e <b>R$ {t.items[2]}</b>.

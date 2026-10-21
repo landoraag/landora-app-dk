@@ -26,6 +26,7 @@ import {
   liveStats,
   lockReason,
   nextTitle,
+  safeEmoji,
   payMultiplier,
   priceOf,
   shopDiscount,
@@ -116,7 +117,7 @@ export function PersonaForm({ wallet, onDone, onMsg }) {
   const { user, profile } = useAuth();
   const editing = hasPersona(wallet);
   const [name, setName] = useState(wallet?.persona?.name || profile?.nickname || "");
-  const [emoji, setEmoji] = useState(wallet?.persona?.emoji || AVATARS[0]);
+  const [emoji, setEmoji] = useState(safeEmoji(wallet?.persona?.emoji) || AVATARS[0]);
   const [cls, setCls] = useState(wallet?.persona?.cls || "");
   const [bio, setBio] = useState(wallet?.persona?.bio || "");
   const [busy, setBusy] = useState(false);
@@ -495,7 +496,7 @@ export function Charity({ wallet, onMsg }) {
   if (!hasPersona(wallet)) return <p className="muted">Crie sua persona para doar.</p>;
   return (
     <div className="game rpg-charity">
-      <p className="game-hint">A cidade já arrecadou {coins(cityTotal)}. Doar dá pontos sociais (1 a cada 🪙 10), XP e humor.</p>
+      <p className="game-hint">A cidade já arrecadou {coins(cityTotal)}. Doar dá pontos sociais (1 a cada 💰 10), XP e humor.</p>
       <div className="rpg-causes">
         {CAUSES.map((c) => (
           <button type="button" key={c.id} className={"rpg-cause" + (cause === c.id ? " sel" : "")} onClick={() => setCause(c.id)}>

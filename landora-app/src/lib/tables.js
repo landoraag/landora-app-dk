@@ -25,7 +25,7 @@ export const PVP_GAMES = {
   blackjack: { name: "Blackjack", icon: "🃏", min: 2, max: 6 },
   roulette: { name: "Roleta russa", icon: "🔫", min: 2, max: 6 },
   chicken: { name: "Corrida da galinha", icon: "🐔", min: 2, max: 6 },
-  coinflip: { name: "Cara ou coroa", icon: "🪙", min: 2, max: 2 },
+  coinflip: { name: "Cara ou coroa", icon: "💰", min: 2, max: 2 },
 };
 export const TURN_TIMEOUT = 45000;
 
@@ -45,7 +45,7 @@ export async function createTable(me, { game, bet, maxPlayers, invited = [], lev
   bet = Math.floor(Number(bet) || 0);
   const g = PVP_GAMES[game];
   if (!g) throw new Error("Jogo inválido.");
-  if (bet < 1) throw new Error("Aposte pelo menos 🪙 1.");
+  if (bet < 1) throw new Error("Aposte pelo menos 💰 1.");
   maxPlayers = Math.max(g.min, Math.min(g.max, Math.floor(maxPlayers) || g.min));
   const ref = doc(collection(db, "casinoTables"));
   await runTransaction(db, async (tx) => {
@@ -70,7 +70,7 @@ export async function createTable(me, { game, bet, maxPlayers, invited = [], lev
   });
   await addDoc(collection(db, "chatMessages"), {
     channelId: CASINO_CHANNEL_ID,
-    text: `⚔️ ${me.name} abriu uma mesa de ${g.name} (🪙 ${bet.toLocaleString("pt-BR")})`,
+    text: `⚔️ ${me.name} abriu uma mesa de ${g.name} (💰 ${bet.toLocaleString("pt-BR")})`,
     table: ref.id,
     ...(invited.length ? { mentions: invited } : {}),
     senderId: me.uid,

@@ -6,14 +6,14 @@
 // - Trabalhar: é um minigame (lib/rpg.js + components/WorkGame.jsx). Sem espera: dá para trabalhar
 //   o quanto quiser. Quem faz as tarefas certas ganha mais, quem erra ganha menos. O salário também
 //   depende do nível, da classe, dos cursos, do veículo, do humor e da energia.
-// - Bônus diário: 🪙 500 por dia (no cassino ou aqui).
+// - Bônus diário: 💰 500 por dia (no cassino ou aqui).
 // - Banco: guardar e sacar é grátis. O que está no banco NÃO pode ser roubado, mas as apostas
 //   e pagamentos usam só a carteira.
-// - Roubar: a cada 2 h (contando tentativa que deu errado). Precisa ter 🪙 100 na carteira, e a
+// - Roubar: a cada 2 h (contando tentativa que deu errado). Precisa ter 💰 100 na carteira, e a
 //   vítima também. 45% de chance de dar certo: leva de 10% a 25% da carteira da vítima (máx.
-//   🪙 1.500). Deu errado: paga multa de 20% da própria carteira (mín. 🪙 50, máx. 🪙 1.000) para
+//   💰 1.500). Deu errado: paga multa de 20% da própria carteira (mín. 💰 50, máx. 💰 1.000) para
 //   a vítima. Quem foi roubado fica protegido por 1 h.
-// - Empréstimo: pede para alguém (até 🪙 3.000). Se a pessoa aceitar, o dinheiro cai na hora; a
+// - Empréstimo: pede para alguém (até 💰 3.000). Se a pessoa aceitar, o dinheiro cai na hora; a
 //   dívida é o valor + 10% de juros, com prazo de 3 dias. Passou do prazo, quem emprestou pode
 //   cobrar: sai da carteira e, se faltar, do banco. Uma dívida ativa por vez.
 
@@ -95,7 +95,7 @@ export async function rob(thiefUid, victimUid) {
     const v = await readWallet(tx, victimUid);
     const left = cooldownLeft(t.lastRob, ROB_COOLDOWN);
     if (left > 0) throw new Error(`A polícia está de olho em você. Tente de novo em ${whenText(left)}.`);
-    if (t.balance < ROB_MIN) throw new Error(`Você precisa de pelo menos 🪙 ${ROB_MIN} na carteira para tentar (caso precise pagar a multa).`);
+    if (t.balance < ROB_MIN) throw new Error(`Você precisa de pelo menos 💰 ${ROB_MIN} na carteira para tentar (caso precise pagar a multa).`);
     if ((v.robShieldUntil || 0) > Date.now()) throw new Error(`${v.nickname} foi roubado há pouco e está protegido por mais ${whenText(v.robShieldUntil - Date.now())}.`);
     if (v.balance < ROB_MIN) throw new Error(`${v.nickname} está com quase nada na carteira. Não vale o risco.`);
     if (!hasPersona(t)) throw new Error("Crie sua persona antes (no botão da persona, aqui em cima).");
@@ -125,7 +125,7 @@ export async function rob(thiefUid, victimUid) {
 export async function requestLoan(borrower, lender, amount, note) {
   amount = num(amount);
   if (borrower.uid === lender.uid) throw new Error("Escolha outra pessoa.");
-  if (amount < 1 || amount > LOAN_MAX) throw new Error(`Peça entre 🪙 1 e 🪙 ${LOAN_MAX.toLocaleString("pt-BR")}.`);
+  if (amount < 1 || amount > LOAN_MAX) throw new Error(`Peça entre 💰 1 e 💰 ${LOAN_MAX.toLocaleString("pt-BR")}.`);
   const mine = await getDocs(collection(db, "loans"));
   if (mine.docs.some((d) => d.data().borrowerId === borrower.uid && ["active", "pending"].includes(d.data().status)))
     throw new Error("Você já tem um pedido ou uma dívida em aberto. Quite antes de pedir outro.");

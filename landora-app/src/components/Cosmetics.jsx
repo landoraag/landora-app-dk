@@ -1,5 +1,5 @@
 import { useCollection } from "../lib/useCollection";
-import { equippedOf } from "../lib/rpg";
+import { equippedOf, safeEmoji } from "../lib/rpg";
 
 // Visual da persona (loja "Visual"): moldura do avatar, tag junto ao nome e cor do nome.
 // Os estilos ficam em styles.css (.fx-frame-*, .fx-tag-*, .fx-name-*).
@@ -17,7 +17,7 @@ export const nameClass = (w) => {
 export function PersonaAvatar({ wallet, size = "", title }) {
   return (
     <span className={"rpg-ava" + (size ? ` ${size}` : "") + frameClass(wallet)} title={title}>
-      {wallet?.persona?.emoji}
+      {safeEmoji(wallet?.persona?.emoji)}
     </span>
   );
 }
@@ -50,7 +50,7 @@ export function NameWithTag({ uid, name }) {
 
 // Mostra o item da loja como será visto (moldura no avatar, tag, nome colorido).
 export function CosmeticPreview({ item, wallet }) {
-  if (item.type === "frame") return <span className={`rpg-ava sm fx-frame-${item.fx}`}>{wallet?.persona?.emoji || "😎"}</span>;
+  if (item.type === "frame") return <span className={`rpg-ava sm fx-frame-${item.fx}`}>{safeEmoji(wallet?.persona?.emoji) || "😎"}</span>;
   if (item.type === "tag") return <span className={`rpg-tag fx-tag-${item.fx}`}>{item.label}</span>;
   return <span className={`rpg-name fx-name-${item.fx}`}>{wallet?.persona?.name || "Nome"}</span>;
 }

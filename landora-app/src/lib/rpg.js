@@ -32,21 +32,26 @@ export const CLASSES = {
   criativo: { name: "Criativo", icon: "🎨", desc: "Lazer rende 50% mais humor e o humor cai mais devagar", fun: 0.5 },
   comerciante: { name: "Comerciante", icon: "🛒", desc: "10% de desconto em todas as lojas", discount: 0.1 },
   filantropo: { name: "Filantropo", icon: "💝", desc: "Caridade rende 50% mais pontos sociais", charity: 0.5 },
-  malandro: { name: "Malandro", icon: "🥷", desc: "+10% de chance no roubo, mas a fama cai o dobro", rob: 0.1, shame: 2 },
+  malandro: { name: "Malandro", icon: "🕵️", desc: "+10% de chance no roubo, mas a fama cai o dobro", rob: 0.1, shame: 2 },
 };
 export const CLASS_CHANGE_COST = 1000;
 
-export const AVATARS = ["😎", "🤠", "🧑‍💻", "👩‍🎨", "🧑‍🍳", "🦸", "🧙", "🥷", "🧑‍🚀", "👨‍🌾", "👩‍🔬", "🧛", "🐱", "🐶", "🦊", "🐼", "🐸", "🦁", "🐵", "🤖", "👽", "💀", "🎃", "👑"];
+export const AVATARS = ["😎", "🤠", "👨‍💻", "👩‍🎨", "👨‍🍳", "🤴", "🧙", "🕵️", "👨‍🚀", "👨‍🌾", "👩‍🔬", "🧛", "🐱", "🐶", "🦊", "🐼", "🐸", "🦁", "🐵", "🤖", "👽", "💀", "🎃", "👑"];
+
+// Personas criadas antes guardam emojis novos demais, que alguns sistemas (ex.: Windows mais antigo)
+// mostram como quadradinho. Na hora de exibir, trocamos por um equivalente antigo.
+const OLD_EMOJI = { "🥷": "🕵️", "🦸": "🤴", "🧑‍💻": "👨‍💻", "🧑‍🍳": "👨‍🍳", "🧑‍🚀": "👨‍🚀" };
+export const safeEmoji = (e) => OLD_EMOJI[e] || e;
 
 const JOBS = {
   empreendedor: [["fechou um contrato com uma padaria", "🥖"], ["vendeu um plano anual", "💼"], ["fez uma reunião de 3 horas que podia ser um e-mail", "📊"], ["abriu um quiosque de açaí", "🍧"]],
-  programador: [["corrigiu um bug que ninguém entendia", "🐛"], ["fez uma landing page em uma tarde", "🧩"], ["arrumou o pixel de um cliente", "🎯"], ["subiu um deploy na sexta-feira (e deu certo)", "🚀"]],
+  programador: [["corrigiu um bug que ninguém entendia", "🐛"], ["fez uma landing page em uma tarde", "🌐"], ["arrumou o pixel de um cliente", "🎯"], ["subiu um deploy na sexta-feira (e deu certo)", "🚀"]],
   criativo: [["criou 12 artes para o feed", "🎨"], ["editou um vídeo para o Instagram", "🎬"], ["fotografou um casamento", "📸"], ["desenhou a logo de uma pizzaria", "🍕"]],
-  comerciante: [["vendeu tudo na feira de domingo", "🧺"], ["revendeu tênis na internet", "👟"], ["negociou um lote de celulares", "📱"], ["abriu a loja mais cedo e lucrou", "🏪"]],
-  filantropo: [["deu uma palestra numa escola", "🎤"], ["organizou um bazar beneficente", "🛍️"], ["ensinou informática para idosos", "👵"], ["coordenou um mutirão no bairro", "🧹"]],
+  comerciante: [["vendeu tudo na feira de domingo", "🛒"], ["revendeu tênis na internet", "👟"], ["negociou um lote de celulares", "📱"], ["abriu a loja mais cedo e lucrou", "🏪"]],
+  filantropo: [["deu uma palestra numa escola", "🎤"], ["organizou um bazar beneficente", "🛍️"], ["ensinou informática para idosos", "👵"], ["coordenou um mutirão no bairro", "🏘️"]],
   malandro: [["vendeu bala no semáforo", "🍬"], ["fez um bico de manobrista", "🚗"], ["achou uma nota no bolso da calça velha", "💵"], ["ganhou uma aposta com o vizinho", "🎲"]],
 };
-const ANY_JOBS = [["entregou panfletos no centro", "📄"], ["fez café para a equipe inteira", "☕"], ["passeou com o cachorro do vizinho", "🐕"], ["lavou o carro do chefe", "🧽"]];
+const ANY_JOBS = [["entregou panfletos no centro", "📄"], ["fez café para a equipe inteira", "☕"], ["passeou com o cachorro do vizinho", "🐕"], ["lavou o carro do chefe", "🚗"]];
 
 /* ---------------- lojas ---------------- */
 // type: food (energia/humor, vai para o inventário) · fun (humor) · course (uma vez, salário +10%)
@@ -120,13 +125,13 @@ export const SHOPS = [
   {
     id: "utilidades",
     name: "Utilidades",
-    icon: "🧰",
+    icon: "🔧",
     desc: "Proteção e companhia.",
     items: [
       { id: "alarme", name: "Alarme anti-roubo", icon: "🚨", price: 500, type: "item", desc: "Bloqueia o próximo roubo contra você (gasta 1)." },
       { id: "gato", name: "Gato", icon: "🐈", price: 2500, type: "pet", desc: "Seu humor cai pela metade da velocidade." },
-      { id: "cachorro", name: "Cachorro de guarda", icon: "🐕‍🦺", price: 3500, type: "pet", desc: "Ladrões têm 15% menos chance contra você." },
-      { id: "papagaio", name: "Papagaio fofoqueiro", icon: "🦜", price: 1500, type: "pet", desc: "+10% de XP." },
+      { id: "cachorro", name: "Cachorro de guarda", icon: "🐕", price: 3500, type: "pet", desc: "Ladrões têm 15% menos chance contra você." },
+      { id: "papagaio", name: "Papagaio fofoqueiro", icon: "🐦", price: 1500, type: "pet", desc: "+10% de XP." },
     ],
   },
   {
@@ -147,7 +152,7 @@ export const SHOPS = [
       { id: "t-novato", name: "Tag Novato", icon: "🌱", price: 300, type: "tag", label: "NOVATO", fx: "green" },
       { id: "t-dev", name: "Tag Dev", icon: "💻", price: 2500, type: "tag", label: "DEV", fx: "blue" },
       { id: "t-vip", name: "Tag VIP", icon: "⭐", price: 3000, type: "tag", label: "VIP", fx: "gold" },
-      { id: "t-fofoca", name: "Tag Fofoqueiro", icon: "🦜", price: 4000, type: "tag", label: "FOFOQUEIRO", fx: "pink", minLevel: 2 },
+      { id: "t-fofoca", name: "Tag Fofoqueiro", icon: "🐦", price: 4000, type: "tag", label: "FOFOQUEIRO", fx: "pink", minLevel: 2 },
       { id: "t-chefe", name: "Tag Chefe", icon: "👔", price: 6000, type: "tag", label: "CHEFE", fx: "purple", minLevel: 4 },
       { id: "t-magnata", name: "Tag Magnata", icon: "💰", price: 30000, type: "tag", label: "MAGNATA", fx: "gold", minLevel: 8 },
       { id: "t-lenda", name: "Tag Lenda", icon: "🏆", price: 25000, type: "tag", label: "LENDA", fx: "fire", minLevel: 10 },
@@ -323,7 +328,7 @@ export async function editPersona(uid, { name, emoji, cls: c, bio }) {
     const upd = { persona: { ...w.persona, name: n, emoji: emoji || w.persona.emoji, bio: String(bio ?? w.persona.bio ?? "").slice(0, 140) } };
     if (c && c !== w.persona.cls) {
       if (!CLASSES[c]) throw new Error("Classe inválida.");
-      if (w.balance < CLASS_CHANGE_COST) throw new Error(`Trocar de classe custa 🪙 ${CLASS_CHANGE_COST.toLocaleString("pt-BR")} (na carteira).`);
+      if (w.balance < CLASS_CHANGE_COST) throw new Error(`Trocar de classe custa 💰 ${CLASS_CHANGE_COST.toLocaleString("pt-BR")} (na carteira).`);
       upd.persona.cls = c;
       upd.balance = w.balance - CLASS_CHANGE_COST;
     }
@@ -474,7 +479,7 @@ export async function donate(uid, causeId, amount) {
   const cause = CAUSES.find((c) => c.id === causeId);
   amount = num(amount);
   if (!cause) throw new Error("Escolha uma causa.");
-  if (amount < CHARITY_MIN) throw new Error(`Doe pelo menos 🪙 ${CHARITY_MIN}.`);
+  if (amount < CHARITY_MIN) throw new Error(`Doe pelo menos 💰 ${CHARITY_MIN}.`);
   return runTransaction(db, async (tx) => {
     const w = await readW(tx, uid);
     if (!hasPersona(w)) throw new Error("Crie sua persona antes de doar.");

@@ -23,7 +23,7 @@ export const isEconomyChannel = (ch) => !!ch && (ch.kind === "economy" || ch.id 
 export const ADMIN_EMAILS = [];
 export const isAdminEmail = (email) => ADMIN_EMAILS.includes(String(email || "").toLowerCase());
 
-export const coins = (n) => `🪙 ${Math.round(n || 0).toLocaleString("pt-BR")}`;
+export const coins = (n) => `💰 ${Math.round(n || 0).toLocaleString("pt-BR")}`;
 
 // Número aleatório "de verdade" (não dá para prever como o Math.random).
 export function rand() {
@@ -59,7 +59,7 @@ export async function ensureWallet(user, profile) {
 }
 
 /* ---------------- reset único da economia ---------------- */
-// Em 21/10/2026: todo mundo volta para 🪙 22.000 na carteira, banco zerado e nível 1 (XP zerado).
+// Em 21/10/2026: todo mundo volta para 💰 22.000 na carteira, banco zerado e nível 1 (XP zerado).
 // Persona, classe, pontos sociais, itens e cursos continuam. Empréstimos em aberto são cancelados
 // (as carteiras foram zeradas, então as dívidas não fazem mais sentido).
 // Como não há mais admin, quem abrir a economia/cassino primeiro depois da atualização roda o
@@ -107,7 +107,7 @@ export async function claimDaily(uid) {
 // Tira a aposta da carteira (falha se não tiver saldo).
 export async function placeBet(uid, bet) {
   bet = Math.floor(bet);
-  if (!(bet >= 1)) throw new Error("Aposte pelo menos 🪙 1.");
+  if (!(bet >= 1)) throw new Error("Aposte pelo menos 💰 1.");
   return runTransaction(db, async (tx) => {
     const ref = walletRef(uid);
     const snap = await tx.get(ref);
@@ -148,11 +148,11 @@ export async function postResult(user, profile, game, channelId = CASINO_CHANNEL
 export const GAME_NAMES = {
   blackjack: "🃏 Blackjack",
   chicken: "🐔 Galinha",
-  coinflip: "🪙 Cara ou coroa",
+  coinflip: "💰 Cara ou coroa",
   roulette: "🔫 Roleta russa",
   daily: "🎁 Bônus diário",
   work: "💼 Trabalho",
-  rob: "🦹 Roubo",
+  rob: "🕵️ Roubo",
   pay: "💸 Pagamento",
   loan: "🤝 Empréstimo",
   admin: "⚙️ Administração",
