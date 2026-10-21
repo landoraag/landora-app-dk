@@ -6,6 +6,8 @@ import { useCollection } from "../lib/useCollection";
 import Avatar from "./Avatar";
 import { CreateTable } from "./Tables";
 import { MORE_GAMES } from "./CasinoMore";
+import { CLASSIC_GAMES } from "./CasinoClassics";
+import { CARD_GAMES } from "./CasinoCards";
 import {
   CHICKEN_LEVELS,
   COINFLIP_PAYOUT,
@@ -618,6 +620,8 @@ const GAMES = [
   { id: "coinflip", name: "Cara ou coroa", icon: "💰", desc: "50% de chance", C: Coinflip },
   { id: "roulette", name: "Roleta russa", icon: "🔫", desc: "1 bala em 6", C: Roulette },
   ...MORE_GAMES,
+  ...CLASSIC_GAMES,
+  ...CARD_GAMES,
 ];
 
 export function CasinoBar() {
@@ -626,6 +630,23 @@ export function CasinoBar() {
   const [open, setOpen] = useState(null); // id do jogo ou "ranking"
   const [error, setError] = useState("");
   const [dailyMsg, setDailyMsg] = useState("");
+  // a lista de jogos pode ser recolhida (lembra a escolha); por padrão todos aparecem de uma vez
+  const [showGames, setShowGames] = useState(() => {
+    try {
+      return localStorage.getItem("landora-casino-games") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleGames = () =>
+    setShowGames((v) => {
+      try {
+        localStorage.setItem("landora-casino-games", v ? "0" : "1");
+      } catch {
+        /* sem armazenamento: só não lembra */
+      }
+      return !v;
+    });
 
   async function daily() {
     setDailyMsg("");
@@ -659,17 +680,22 @@ export function CasinoBar() {
         </button>
         {dailyMsg && <span className="casino-toast">{dailyMsg}</span>}
       </div>
-      <div className="casino-games">
-        {GAMES.map((g) => (
-          <button type="button" key={g.id} className={"casino-game g-" + g.id} onClick={() => (setError(""), setOpen(g.id))}>
-            <span className="cg-icon">{g.icon}</span>
-            <span className="cg-text">
-              <b>{g.name}</b>
-              <span>{g.desc}</span>
-            </span>
-          </button>
-        ))}
-      </div>
+      <button type="button" className="casino-games-toggle" onClick={toggleGames} aria-expanded={showGames}>
+        🎮 Jogos ({GAMES.length}) <span>{showGames ? "recolher ▴" : "mostrar ▾"}</span>
+      </button>
+      {showGames && (
+        <div className="casino-games">
+          {GAMES.map((g) => (
+            <button type="button" key={g.id} className={"casino-game g-" + g.id} onClick={() => (setError(""), setOpen(g.id))}>
+              <span className="cg-icon">{g.icon}</span>
+              <span className="cg-text">
+                <b>{g.name}</b>
+                <span>{g.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {open && (
         createPortal(

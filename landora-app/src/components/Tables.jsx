@@ -5,12 +5,15 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
 import { useCollection } from "../lib/useCollection";
 import { notify } from "../lib/push";
-import { CASINO_CHANNEL_ID, CHICKEN_LEVELS, chickenMultiplier, coins, handValue } from "../lib/casino";
+import { CASINO_CHANNEL_ID, CHICKEN_LEVELS, MINES_OPTIONS, TOWER_MODES, chickenMultiplier, coins, handValue } from "../lib/casino";
+import { PLINKO_RISKS } from "../lib/gamesPure";
 import {
   PVP_GAMES,
   TURN_TIMEOUT,
   bjAction,
   chickenAction,
+  crashEndsAt,
+  crashFinalize,
   createTable,
   joinTable,
   leaveTable,
@@ -18,6 +21,7 @@ import {
   startTable,
 } from "../lib/tables";
 import { BetPicker, PlayingCard, fmtX } from "./Casino";
+import { CrashTable, HiloTable, InstantTable, MinesTable, PickSelector, TowerTable, TrucoTable, UnoTable, pickLabel } from "./TablesMore";
 import Avatar from "./Avatar";
 
 const useMe = () => {
@@ -36,6 +40,18 @@ function useNow(active) {
 }
 
 /* ---------------- criar desafio ---------------- */
+const DEFAULT_LEVEL = { chicken: "medio", mines: "3", tower: "medio", plinko: "medio", truco: "12" };
+// o que aparece embaixo do nome do jogo no cartão da mesa
+export function tableSub(t) {
+  const lv = t.level;
+  if (t.game === "chicken") return CHICKEN_LEVELS[lv]?.label;
+  if (t.game === "mines") return `${lv} ${Number(lv) === 1 ? "mina" : "minas"}`;
+  if (t.game === "tower") return TOWER_MODES[lv]?.label;
+  if (t.game === "plinko") return `risco ${PLINKO_RISKS[lv]?.label?.toLowerCase()}`;
+  if (t.game === "truco") return `${lv === "6" ? 6 : 12} pontos`;
+  return "";
+}
+
 export function CreateTable({ wallet, onDone }) {
   const me = useMe();
   const { data: users } = useCollection("users", "createdAt", "asc");
@@ -45,20 +61,31 @@ export function CreateTable({ wallet, onDone }) {
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [level, setLevel] = useState("medio");
   const [side, setSide] = useState("cara");
+  const [pick, setPick] = useState(null);
   const [open, setOpen] = useState(true);
   const [invited, setInvited] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const g = PVP_GAMES[game];
+  const duel = g.max === 2; // só 2 jogadores (cara ou coroa, truco)
+
+  function chooseGame(k) {
+    setGame(k);
+    setLevel(DEFAULT_LEVEL[k] || "medio");
+    setPick(k === "baccarat" ? "player" : null);
+    setInvited([]);
+    setMaxPlayers((n) => Math.min(Math.max(n, PVP_GAMES[k].min), PVP_GAMES[k].max));
+  }
 
   async function create() {
     setError("");
     if (!open && !invited.length) return setError("Escolha quem você quer desafiar.");
+    if (g.needsPick && pick == null) return setError(game === "wheel" ? "Escolha o seu número." : "Escolha Jogador ou Banca.");
     setBusy(true);
     try {
       const inv = open ? [] : invited;
-      const max = game === "coinflip" ? 2 : open ? maxPlayers : Math.min(6, Math.max(2, inv.length + 1));
-      await createTable(me, { game, bet, maxPlayers: max, invited: inv, level, side });
+      const max = duel ? 2 : open ? Math.min(g.max, maxPlayers) : Math.min(g.max, Math.max(g.min, inv.length + 1));
+      await createTable(me, { game, bet, maxPlayers: max, invited: inv, level, side, pick });
       if (inv.length)
         notify({
           kind: "mention",
@@ -76,36 +103,35 @@ export function CreateTable({ wallet, onDone }) {
   }
 
   const toggle = (uid) => setInvited((l) => (l.includes(uid) ? l.filter((x) => x !== uid) : [...l, uid]));
+  const Seg = ({ value, onChange, items }) => (
+    <div className="seg">
+      {items.map(([k, label]) => (
+        <button type="button" key={k} className={value === k ? "sel" : ""} onClick={() => onChange(k)}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="game pvp-create">
       <div className="pvp-games">
         {Object.entries(PVP_GAMES).map(([k, v]) => (
-          <button type="button" key={k} className={"pvp-game" + (game === k ? " sel" : "")} onClick={() => setGame(k)}>
+          <button type="button" key={k} className={"pvp-game" + (game === k ? " sel" : "")} onClick={() => chooseGame(k)}>
             <span>{v.icon}</span>
             <b>{v.name}</b>
           </button>
         ))}
       </div>
+      {g.hint && <p className="game-hint pvp-hint">{g.hint}</p>}
 
-      {game === "chicken" && (
-        <div className="seg">
-          {Object.entries(CHICKEN_LEVELS).map(([k, v]) => (
-            <button type="button" key={k} className={level === k ? "sel" : ""} onClick={() => setLevel(k)}>
-              {v.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {game === "coinflip" && (
-        <div className="seg">
-          {["cara", "coroa"].map((s) => (
-            <button type="button" key={s} className={side === s ? "sel" : ""} onClick={() => setSide(s)}>
-              Eu fico com {s}
-            </button>
-          ))}
-        </div>
-      )}
+      {game === "chicken" && <Seg value={level} onChange={setLevel} items={Object.entries(CHICKEN_LEVELS).map(([k, v]) => [k, v.label])} />}
+      {game === "mines" && <Seg value={level} onChange={setLevel} items={MINES_OPTIONS.map((n) => [String(n), `${n} ${n === 1 ? "mina" : "minas"}`])} />}
+      {game === "tower" && <Seg value={level} onChange={setLevel} items={Object.entries(TOWER_MODES).map(([k, v]) => [k, `${v.label} (${v.tiles} casas)`])} />}
+      {game === "plinko" && <Seg value={level} onChange={setLevel} items={Object.entries(PLINKO_RISKS).map(([k, v]) => [k, `Risco ${v.label.toLowerCase()}`])} />}
+      {game === "truco" && <Seg value={level} onChange={setLevel} items={[["6", "Rápido (6 pontos)"], ["12", "Completo (12 pontos)"]]} />}
+      {game === "coinflip" && <Seg value={side} onChange={setSide} items={["cara", "coroa"].map((s) => [s, `Eu fico com ${s}`])} />}
+      {g.needsPick && <PickSelector game={game} players={[]} value={pick} onChange={setPick} />}
 
       <div className="seg">
         <button type="button" className={open ? "sel" : ""} onClick={() => setOpen(true)}>
@@ -117,11 +143,11 @@ export function CreateTable({ wallet, onDone }) {
       </div>
 
       {open ? (
-        game !== "coinflip" && (
+        !duel && (
           <div className="pvp-row">
             <span>Jogadores</span>
             <div className="seg small">
-              {[2, 3, 4, 5, 6].map((n) => (
+              {Array.from({ length: g.max - g.min + 1 }, (_, i) => g.min + i).map((n) => (
                 <button type="button" key={n} className={maxPlayers === n ? "sel" : ""} onClick={() => setMaxPlayers(n)}>
                   {n}
                 </button>
@@ -136,8 +162,8 @@ export function CreateTable({ wallet, onDone }) {
               type="button"
               key={p.id}
               className={"pvp-person" + (invited.includes(p.id) ? " sel" : "")}
-              onClick={() => (game === "coinflip" ? setInvited([p.id]) : toggle(p.id))}
-              disabled={game !== "coinflip" && !invited.includes(p.id) && invited.length >= 5}
+              onClick={() => (duel ? setInvited([p.id]) : toggle(p.id))}
+              disabled={!duel && !invited.includes(p.id) && invited.length >= g.max - 1}
             >
               <Avatar src={p.photoURL} name={p.nickname} size={26} />
               <span>{p.nickname}</span>
@@ -172,6 +198,7 @@ export function TableCard({ id }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState(false);
+  const [pick, setPick] = useState(null);
   const prev = useRef(null);
 
   // Quando a mesa começa, abre sozinho para quem está jogando.
@@ -181,6 +208,16 @@ export function TableCard({ id }) {
     if (prev.current === "lobby" && t.status !== "lobby" && t.status !== "cancelled" && mine) setView(true);
     prev.current = t.status;
   }, [t?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Crash: se o foguete já explodiu e ninguém fechou a mesa, quem estiver com o chat aberto fecha
+  useEffect(() => {
+    if (t && t.game === "crash" && t.status === "playing" && t.state) {
+      const left = crashEndsAt(t.state) + 400 - Date.now();
+      const id = setTimeout(() => crashFinalize(t.id).catch(() => {}), Math.max(0, left) + 50);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [t?.status, t?.state?.startAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (t === undefined) return <div className="table-card loading">Carregando mesa…</div>;
   if (t === null) return <div className="table-card">Mesa não encontrada.</div>;
@@ -210,7 +247,7 @@ export function TableCard({ id }) {
           <b>{g.name}</b>
           <span>
             {coins(t.bet)} cada · pote {coins(t.bet * t.players.length)}
-            {t.game === "chicken" ? ` · ${CHICKEN_LEVELS[t.level]?.label}` : ""}
+            {tableSub(t) ? ` · ${tableSub(t)}` : ""}
           </span>
         </div>
         <span className={"tc-status s-" + t.status}>{STATUS[t.status]}</span>
@@ -221,6 +258,7 @@ export function TableCard({ id }) {
           <span key={p.uid} className={"tc-player" + (t.result?.winners?.includes(p.uid) ? " win" : "")} title={p.name}>
             <Avatar src={p.photo} name={p.name} size={26} />
             <span>{p.name}</span>
+            {p.pick != null && <em className="tc-pick">{pickLabel(t.game, p.pick)}</em>}
             {t.result?.winners?.includes(p.uid) && <i>👑</i>}
           </span>
         ))}
@@ -238,9 +276,10 @@ export function TableCard({ id }) {
       )}
       {error && <p className="auth-error">{error}</p>}
 
+      {canJoin && g.needsPick && <PickSelector game={t.game} players={t.players} value={pick} onChange={setPick} />}
       <div className="tc-actions">
         {canJoin && (
-          <button type="button" className="btn btn-gradient" disabled={busy} onClick={act(() => joinTable(id, me))}>
+          <button type="button" className="btn btn-gradient" disabled={busy || (g.needsPick && pick == null)} onClick={act(() => joinTable(id, me, pick))}>
             Entrar · {coins(t.bet)}
           </button>
         )}
@@ -307,6 +346,13 @@ function TableModal({ t, me, onClose }) {
         {t.game === "roulette" && <RouletteTable {...props} />}
         {t.game === "chicken" && <ChickenTable {...props} />}
         {t.game === "coinflip" && <CoinTable {...props} />}
+        {t.game === "mines" && <MinesTable {...props} />}
+        {t.game === "tower" && <TowerTable {...props} />}
+        {t.game === "hilo" && <HiloTable {...props} />}
+        {t.game === "crash" && <CrashTable {...props} />}
+        {t.game === "truco" && <TrucoTable {...props} />}
+        {t.game === "uno" && <UnoTable {...props} />}
+        {g.kind === "instant" && t.game !== "coinflip" && <InstantTable t={t} me={me} />}
         {t.result && (() => {
           const inside = t.players.some((p) => p.uid === me.uid);
           const got = t.result.payouts?.[me.uid];

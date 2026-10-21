@@ -1293,7 +1293,15 @@ export default function Chat() {
 
         {inCasino && <CasinoBar />}
         {inEconomy && <EconomyBar />}
-        <div ref={listRef} className="chat-messages" onClick={(e) => e.target === e.currentTarget && setSelectedId(null)}>
+        <div
+          ref={listRef}
+          className="chat-messages"
+          onClick={(e) => e.target === e.currentTarget && setSelectedId(null)}
+          // nunca deixa a lista "escorregar" para o lado (cortava o começo das mensagens)
+          onScroll={(e) => {
+            if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0;
+          }}
+        >
           {shownMessages.map((m) => (
             <Message
               key={m.id}
