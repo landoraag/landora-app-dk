@@ -5,10 +5,10 @@
 // cassino de verdade) e o prêmio entra quando o jogo termina. Cada resultado vira uma mensagem
 // no canal #cassino.
 
-import { addDoc, collection, doc, getDoc, increment, runTransaction, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 
-export const START_BALANCE = 1000;
+export const START_BALANCE = 22000;
 export const DAILY_AMOUNT = 500;
 export const CASINO_CHANNEL_ID = "cassino";
 export const CASINO_CATEGORY_ID = "entretenimento";
@@ -17,8 +17,10 @@ export const ECONOMY_CHANNEL_ID = "economia";
 export const isCasinoChannel = (ch) => !!ch && (ch.kind === "casino" || ch.id === CASINO_CHANNEL_ID);
 export const isEconomyChannel = (ch) => !!ch && (ch.kind === "economy" || ch.id === ECONOMY_CHANNEL_ID);
 
-// Quem administra a economia (dar/tirar moedas, zerar tudo).
-export const ADMIN_EMAILS = ["muzelleitedavi@gmail.com"];
+// Quem administra a economia (dar/tirar moedas, zerar tudo). Por enquanto ninguém: o modo admin
+// do Davi foi removido (aqui e em firestore.rules). Para dar o poder a alguém, ponha o e-mail aqui
+// E na função isEconomyAdmin() de firestore.rules.
+export const ADMIN_EMAILS = [];
 export const isAdminEmail = (email) => ADMIN_EMAILS.includes(String(email || "").toLowerCase());
 
 export const coins = (n) => `🪙 ${Math.round(n || 0).toLocaleString("pt-BR")}`;
@@ -51,6 +53,42 @@ export async function ensureWallet(user, profile) {
   } else {
     const d = snap.data();
     if (d.nickname !== info.nickname || d.photoURL !== info.photoURL) await updateDoc(ref, info);
+  }
+  // Zera a economia uma única vez para todo mundo (ver abaixo). Não trava a abertura da tela.
+  runEconomyResetOnce().catch((e) => console.error("reset da economia:", e));
+}
+
+/* ---------------- reset único da economia ---------------- */
+// Em 21/10/2026: todo mundo volta para 🪙 22.000 na carteira, banco zerado e nível 1 (XP zerado).
+// Persona, classe, pontos sociais, itens e cursos continuam. Empréstimos em aberto são cancelados
+// (as carteiras foram zeradas, então as dívidas não fazem mais sentido).
+// Como não há mais admin, quem abrir a economia/cassino primeiro depois da atualização roda o
+// reset. A marca meta/{RESET_ID} garante que ele rode uma vez só.
+const RESET_ID = "economia-22k-2026-10-21";
+export async function runEconomyResetOnce() {
+  const mark = doc(db, "meta", RESET_ID);
+  const claimed = await runTransaction(db, async (tx) => {
+    if ((await tx.get(mark)).exists()) return false;
+    tx.set(mark, { status: "running", startedAt: Date.now() });
+    return true;
+  });
+  if (!claimed) return false;
+  try {
+    const [wallets, loans] = await Promise.all([getDocs(collection(db, "wallets")), getDocs(collection(db, "loans"))]);
+    const ops = [
+      ...wallets.docs.map((d) => [d.ref, { balance: START_BALANCE, bank: 0, xp: 0, lastWork: 0 }]),
+      ...loans.docs.filter((d) => ["pending", "active"].includes(d.data().status)).map((d) => [d.ref, { status: "cancelled" }]),
+    ];
+    for (let i = 0; i < ops.length; i += 400) {
+      const batch = writeBatch(db);
+      ops.slice(i, i + 400).forEach(([ref, data]) => batch.update(ref, data));
+      await batch.commit();
+    }
+    await updateDoc(mark, { status: "done", finishedAt: Date.now(), wallets: wallets.size });
+    return true;
+  } catch (e) {
+    await deleteDoc(mark).catch(() => {}); // deixa outra pessoa tentar de novo
+    throw e;
   }
 }
 

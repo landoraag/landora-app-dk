@@ -2375,3 +2375,67 @@ html.has-pseudo-fs .telao-stage.is-fs { position: fixed; inset: 0; z-index: 1000
 .pad-file { display: block; cursor: pointer; }
 .pad-file input { display: none; }
 .pad-file span { display: block; padding: 12px; border-radius: 10px; border: 1px dashed var(--blue-light); background: rgba(0,87,255,0.08); font-size: 0.8rem; color: var(--gray-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------------- visual da persona (loja "Visual") ---------------- */
+.rpg-namewrap { display: inline-flex; align-items: center; gap: 0; max-width: 100%; vertical-align: middle; }
+.rpg-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.05em; line-height: 1.5; border: 1px solid currentColor; vertical-align: middle; white-space: nowrap; }
+.fx-tag-green { color: #4ade80; background: rgba(74,222,128,0.12); }
+.fx-tag-blue { color: #60a5fa; background: rgba(96,165,250,0.14); }
+.fx-tag-gold { color: #fbbf24; background: rgba(251,191,36,0.14); }
+.fx-tag-pink { color: #f472b6; background: rgba(244,114,182,0.14); }
+.fx-tag-purple { color: #c084fc; background: rgba(192,132,252,0.14); }
+.fx-tag-fire { color: #fb923c; background: rgba(251,146,60,0.16); box-shadow: 0 0 8px rgba(251,146,60,0.4); }
+
+.fx-name-blue { color: #60a5fa; }
+.fx-name-gold { color: #fbbf24; text-shadow: 0 0 8px rgba(251,191,36,0.35); }
+.fx-name-sunset, .fx-name-rainbow { background-clip: text; -webkit-background-clip: text; color: transparent; -webkit-text-fill-color: transparent; font-weight: 800; }
+.fx-name-sunset { background-image: linear-gradient(90deg, #f97316, #ec4899, #a855f7); }
+.fx-name-rainbow { background-image: linear-gradient(90deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #6366f1, #d946ef, #ef4444); background-size: 200% 100%; animation: fx-slide 4s linear infinite; }
+@keyframes fx-slide { to { background-position: 200% 0; } }
+
+.rpg-ava[class*="fx-frame-"] { border-width: 3px; border-style: solid; }
+.rpg-ava.sm[class*="fx-frame-"] { border-width: 2px; }
+.rpg-ava.fx-frame-bronze { border-color: #cd7f32; box-shadow: 0 0 8px rgba(205,127,50,0.5); }
+.rpg-ava.fx-frame-silver { border-color: #cbd5e1; box-shadow: 0 0 10px rgba(203,213,225,0.5); }
+.rpg-ava.fx-frame-gold { border-color: #facc15; box-shadow: 0 0 12px rgba(250,204,21,0.6); }
+.rpg-ava.fx-frame-neon { border-color: #22d3ee; box-shadow: 0 0 6px #22d3ee, 0 0 16px #0ea5e9, inset 0 0 8px rgba(34,211,238,0.45); }
+.rpg-ava.fx-frame-fire { border-color: #f97316; animation: fx-fire 1.4s ease-in-out infinite alternate; }
+@keyframes fx-fire { from { box-shadow: 0 0 6px #f97316, 0 0 12px rgba(239,68,68,0.6); } to { box-shadow: 0 0 12px #fb923c, 0 0 22px rgba(239,68,68,0.9); } }
+.rpg-ava.fx-frame-rainbow { border-color: transparent; background: linear-gradient(#0b1020, #0b1020) padding-box, conic-gradient(#ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #6366f1, #d946ef, #ef4444) border-box; }
+.rpg-ava.fx-frame-diamond { border-color: #a5f3fc; background: linear-gradient(135deg, rgba(165,243,252,0.3), rgba(99,102,241,0.2)); animation: fx-diamond 2.2s ease-in-out infinite alternate; }
+@keyframes fx-diamond { from { box-shadow: 0 0 6px #a5f3fc, 0 0 14px rgba(99,102,241,0.5); } to { box-shadow: 0 0 14px #e0f2fe, 0 0 26px rgba(165,243,252,0.8); } }
+
+.rpg-item.equipped { border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.07); }
+.rpg-items .eco-sub { margin: 8px 0 2px; }
+.rpg-item-ico:has(.rpg-tag), .rpg-item-ico:has(.rpg-name) { width: auto; min-width: 58px; max-width: 96px; font-size: 0.8rem; }
+.rpg-item-ico .rpg-tag { margin-left: 0; }
+
+/* ---------------- minigame de trabalho ---------------- */
+.work-intro { gap: 14px; }
+.work-play, .work-result { display: flex; flex-direction: column; gap: 12px; }
+.work-marks { display: flex; justify-content: center; gap: 8px; font-size: 1.15rem; }
+.work-marks .now { transform: scale(1.25); filter: drop-shadow(0 0 6px rgba(0,87,255,0.8)); }
+.work-task { display: flex; flex-direction: column; gap: 10px; }
+.work-task-top { display: flex; align-items: center; gap: 10px; }
+.work-task-top span { font-size: 0.72rem; color: var(--gray-soft); }
+.work-task-top b { flex: 1; font-size: 0.95rem; }
+.work-task-top em { font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; color: #fde68a; }
+.work-timer { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.work-timer i { display: block; height: 100%; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444); background-size: 300% 100%; transition: width 0.2s linear; }
+.work-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); }
+.work-card p { margin: 0; font-size: 0.92rem; }
+.work-row { display: flex; gap: 8px; }
+.work-row .eco-note { flex: 1; min-width: 0; }
+.work-phrase { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1rem; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,0.35); border: 1px dashed rgba(255,255,255,0.18); user-select: none; -webkit-user-select: none; }
+.work-seq { display: flex; justify-content: center; gap: 10px; font-size: 2.2rem; padding: 6px 0; }
+.work-seq.picked { font-size: 1.7rem; opacity: 0.95; }
+.work-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.work-grid.prices { grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); }
+.work-grid button { padding: 12px 6px; font-size: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: var(--text); cursor: pointer; }
+.work-grid.prices button { font-size: 0.95rem; font-weight: 700; }
+.work-grid button:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+.work-grid button:disabled { opacity: 0.35; cursor: default; }
+.work-grid button.ok { opacity: 1; background: rgba(34,197,94,0.22); border-color: rgba(34,197,94,0.6); }
+.work-grid button.bad { background: rgba(239,68,68,0.3); border-color: rgba(239,68,68,0.7); animation: work-shake 0.3s; }
+@keyframes work-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.work-feedback { padding: 36px 0; text-align: center; font-size: 1.25rem; font-weight: 800; }

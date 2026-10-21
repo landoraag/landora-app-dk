@@ -44,9 +44,10 @@ service cloud.firestore {
 
     // Economia/cassino (moedas de mentira). Todos veem as carteiras (ranking). Cada um cria só a
     // própria; alterações podem vir de outra pessoa (pagar, roubar, empréstimo, prêmio de mesa),
-    // mas nenhum saldo pode ficar negativo. Apagar carteira: só o administrador.
+    // mas nenhum saldo pode ficar negativo. Apagar carteira: só o administrador (hoje ninguém: o
+    // modo admin do Davi foi removido; para dar o poder a alguém, ponha o e-mail na lista abaixo).
     function isEconomyAdmin() {
-      return myEmail() in ["muzelleitedavi@gmail.com"];
+      return myEmail() in [];
     }
     function validWallet() {
       return request.resource.data.balance is number && request.resource.data.balance >= 0

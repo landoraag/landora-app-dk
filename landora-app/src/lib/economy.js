@@ -3,8 +3,9 @@
 // bagunçarem o saldo de ninguém.
 //
 // Regras (pensadas para ser justas):
-// - Trabalhar: agora faz parte da vida da persona (lib/rpg.js): gasta energia e o salário depende
-//   do nível, da classe, dos cursos, do veículo e do humor.
+// - Trabalhar: é um minigame (lib/rpg.js + components/WorkGame.jsx). Sem espera: dá para trabalhar
+//   o quanto quiser. Quem faz as tarefas certas ganha mais, quem erra ganha menos. O salário também
+//   depende do nível, da classe, dos cursos, do veículo, do humor e da energia.
 // - Bônus diário: 🪙 500 por dia (no cassino ou aqui).
 // - Banco: guardar e sacar é grátis. O que está no banco NÃO pode ser roubado, mas as apostas
 //   e pagamentos usam só a carteira.
@@ -21,7 +22,6 @@ import { db } from "./firebase";
 import { START_BALANCE, rand, walletRef } from "./casino";
 import { ITEMS, hasPersona, robChanceFor, robSocialPenalty, workShift } from "./rpg";
 
-export const WORK_COOLDOWN = 60 * 60 * 1000;
 export const ROB_COOLDOWN = 2 * 60 * 60 * 1000;
 export const ROB_SHIELD = 60 * 60 * 1000;
 export const ROB_CHANCE = 0.45;
@@ -48,8 +48,10 @@ async function readWallet(tx, uid) {
 }
 
 /* ---------------- trabalhar ---------------- */
-// Agora depende da persona (energia, nível, classe, cursos e veículo): veja lib/rpg.js.
-export const work = (uid) => workShift(uid);
+// Minigame: o turno tem várias tarefas (components/WorkGame.jsx) e o pagamento depende de quão bem
+// você foi (results: nota de cada tarefa, 1 = certo, 0.5 = meio errado, 0 = errado). Sem espera
+// entre um turno e outro. Veja lib/rpg.js.
+export const work = (uid, results) => workShift(uid, results);
 
 /* ---------------- banco ---------------- */
 export async function deposit(uid, amount) {
@@ -236,7 +238,7 @@ export async function adminResetAll(uids) {
         balance: START_BALANCE, bank: 0, wins: 0, losses: 0, biggestWin: 0, lastDaily: "", lastWork: 0, lastRob: 0, robShieldUntil: 0,
         // A persona continua (nome, avatar, classe), mas recomeça a vida do zero.
         xp: 0, social: 0, donated: 0, spent: 0, energy: 100, energyAt: Date.now(), mood: 60, moodAt: Date.now(),
-        inv: {}, courses: {}, assets: {}, pets: {},
+        inv: {}, courses: {}, assets: {}, pets: {}, cosmetics: {}, equipped: {},
       })
     )
   );

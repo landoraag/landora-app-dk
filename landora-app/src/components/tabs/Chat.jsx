@@ -5,6 +5,7 @@ import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
 import { useAuth } from "../../context/AuthContext";
 import Avatar from "../Avatar";
+import { NameWithTag } from "../Cosmetics";
 import Icon from "../Icons";
 import { downloadUrl, uploadFile, uploadImage } from "../../lib/cloudinary";
 import { shrinkImage } from "../../lib/image";
@@ -292,7 +293,7 @@ function Message({ m, mine, photo, people, myName, mentionsMe, selected, onSelec
       <div className="chat-bubble">
         <div className="chat-bubble-author">
           <Avatar src={photo} name={m.senderNickname} size={18} />
-          <span>{m.senderNickname}</span>
+          <NameWithTag uid={m.senderId} name={m.senderNickname} />
           <time>{timeOf(m)}</time>
           {m.pinned && (
             <span className="chat-pin-tag" title="Mensagem fixada">

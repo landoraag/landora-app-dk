@@ -8,6 +8,8 @@ import {
   CHARITY_MIN,
   CLASSES,
   CLASS_CHANGE_COST,
+  COSMETIC_LABELS,
+  COSMETIC_TYPES,
   ITEMS,
   SHOPS,
   TITLES,
@@ -16,7 +18,10 @@ import {
   createPersona,
   donate,
   editPersona,
+  equipCosmetic,
+  equippedOf,
   hasPersona,
+  isCosmetic,
   levelInfo,
   liveStats,
   lockReason,
@@ -26,9 +31,10 @@ import {
   shopDiscount,
   statBar,
   titleOf,
+  unequipCosmetic,
   useItem as consumeItem,
-  workCooldown,
 } from "../lib/rpg";
+import { CosmeticPreview, PersonaAvatar, PersonaName, frameClass } from "./Cosmetics";
 import { Ranking } from "./Casino";
 import Avatar from "./Avatar";
 
@@ -82,9 +88,11 @@ export function PersonaStrip({ wallet, onOpen, onCreate }) {
   const c = CLASSES[wallet.persona.cls];
   return (
     <button type="button" className="rpg-strip" onClick={onOpen} title="Abrir a ficha da persona">
-      <span className="rpg-ava">{wallet.persona.emoji}</span>
+      <PersonaAvatar wallet={wallet} />
       <span className="rpg-who">
-        <b>{wallet.persona.name}</b>
+        <b>
+          <PersonaName wallet={wallet} />
+        </b>
         <span>
           {c?.icon} {c?.name} · Nv {s.level} · {t.icon} {t.name}
         </span>
@@ -137,7 +145,7 @@ export function PersonaForm({ wallet, onDone, onMsg }) {
   return (
     <div className="game rpg-form">
       <div className="rpg-form-top">
-        <span className="rpg-ava big">{emoji}</span>
+        <span className={"rpg-ava big" + frameClass(wallet)}>{emoji}</span>
         <input className="eco-note" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da persona" maxLength={32} />
       </div>
       <div className="rpg-emojis">
@@ -197,9 +205,11 @@ export function PersonaSheet({ wallet, onMsg, onEdit, onShop }) {
   return (
     <div className="game rpg-sheet">
       <div className="rpg-sheet-head">
-        <span className="rpg-ava big">{wallet.persona.emoji}</span>
+        <PersonaAvatar wallet={wallet} size="big" />
         <div>
-          <h3>{wallet.persona.name}</h3>
+          <h3>
+            <PersonaName wallet={wallet} />
+          </h3>
           <span>
             {c?.icon} {c?.name} · {t.icon} {t.name}
           </span>
@@ -233,8 +243,8 @@ export function PersonaSheet({ wallet, onMsg, onEdit, onShop }) {
           <b>{pct(payMultiplier(wallet, now))}</b>
         </div>
         <div>
-          <span>Turno a cada</span>
-          <b>{workCooldown(wallet) / 60000} min</b>
+          <span>Turno de trabalho</span>
+          <b>sem espera</b>
         </div>
         <div>
           <span>Pontos sociais</span>
@@ -268,6 +278,21 @@ export function PersonaSheet({ wallet, onMsg, onEdit, onShop }) {
             {p.icon} {p.name.replace(/^Curso de /, "")}
           </span>
         ))}
+      </div>
+
+      <h4 className="eco-sub">Visual</h4>
+      <div className="rpg-assets">
+        {COSMETIC_TYPES.map((type) => {
+          const it = equippedOf(wallet, type);
+          return (
+            <span key={type}>
+              {it ? `${it.icon} ${it.name}` : `Sem ${COSMETIC_LABELS[type].toLowerCase().replace(/s$/, "")}`}
+            </span>
+          );
+        })}
+        <button type="button" className="btn-link" onClick={onShop}>
+          Ver loja Visual
+        </button>
       </div>
 
       <h4 className="eco-sub">Mochila</h4>
@@ -313,7 +338,10 @@ function itemText(i) {
   if (i.desc) return i.desc;
   if (i.type === "course") return `+10% de salário para sempre · +${i.xp} XP`;
   if (i.type === "house") return `+${i.maxEnergy} de energia máxima · humor nunca abaixo de ${i.moodFloor}`;
-  if (i.type === "vehicle") return `Trabalha a cada ${60 - i.cooldown} min${i.pay ? ` · +${pct(i.pay)} de salário` : ""}`;
+  if (i.type === "vehicle") return `+${pct(i.pay)} de salário em cada turno`;
+  if (i.type === "frame") return "Moldura no seu avatar";
+  if (i.type === "tag") return `Tag “${i.label}” junto ao seu nome`;
+  if (i.type === "color") return "Seu nome aparece colorido";
   return effectText(i);
 }
 
@@ -325,13 +353,34 @@ export function Shops({ wallet, onMsg }) {
   const s = SHOPS.find((x) => x.id === shop);
   const disc = shopDiscount(wallet);
 
+  async function equip(item) {
+    setBusy(true);
+    try {
+      await equipCosmetic(user.uid, item.id);
+      onMsg(`${item.icon} ${item.name} equipado.`);
+    } catch (e) {
+      onMsg(e.message, true);
+    }
+    setBusy(false);
+  }
+  async function unequip(item) {
+    setBusy(true);
+    try {
+      await unequipCosmetic(user.uid, item.type);
+      onMsg(`${item.icon} ${item.name} guardado.`);
+    } catch (e) {
+      onMsg(e.message, true);
+    }
+    setBusy(false);
+  }
+
   async function buy(item, use) {
     setBusy(true);
     try {
       const r = await buyItem(user.uid, item.id, { use });
       const extra = r.refund ? ` (vendeu ${r.old.name} por ${coins(r.refund)})` : "";
       onMsg(`${item.icon} ${r.used ? `${item.name}: ${effectText(r.effect)}` : `Comprou ${item.name}`}${extra}`);
-      if (["course", "house", "vehicle", "pet"].includes(item.type) || r.price >= 400)
+      if (["course", "house", "vehicle", "pet", ...COSMETIC_TYPES].includes(item.type) || r.price >= 400)
         post(user, profile, { type: "shop", bet: 0, payout: -r.price, text: `comprou ${item.icon} ${item.name}`, detail: `${item.icon} ${item.name} por ${coins(r.price)}${extra}` });
       announceLevelUp(user, profile, r.levelUp);
     } catch (e) {
@@ -355,39 +404,56 @@ export function Shops({ wallet, onMsg }) {
         {disc ? ` · ${disc > 0 ? `Seu desconto: ${pct(disc)}` : `Sua fama faz tudo custar ${pct(-disc)} a mais`}` : ""}
       </p>
       <div className="rpg-items">
-        {s.items.map((item) => {
-          const lock = lockReason(item, wallet);
+        {s.items.map((item, i) => {
+          const cosmetic = isCosmetic(item);
+          const heading = cosmetic && item.type !== s.items[i - 1]?.type ? <h4 key={"h-" + item.type} className="eco-sub">{COSMETIC_LABELS[item.type]}</h4> : null;
+          const have = cosmetic && !!wallet.cosmetics?.[item.id];
+          const on = have && wallet.equipped?.[item.type] === item.id;
+          const lock = have ? "" : lockReason(item, wallet);
           const price = priceOf(item, wallet);
           const consumable = ["food", "fun"].includes(item.type);
           const poor = (wallet.balance || 0) < price && !(item.type === "house" || item.type === "vehicle");
           return (
-            <div key={item.id} className={"rpg-item" + (lock ? " locked" : "")}>
-              <span className="rpg-item-ico">{item.icon}</span>
-              <div className="rpg-item-info">
-                <b>{item.name}</b>
-                <span>{itemText(item)}</span>
-                <em>
-                  {coins(price)}
-                  {price !== item.price && <s>{item.price.toLocaleString("pt-BR")}</s>}
-                </em>
-              </div>
-              <div className="rpg-item-act">
-                {lock ? (
-                  <span className="rpg-lock">🔒 {lock}</span>
-                ) : consumable ? (
-                  <>
-                    <button type="button" className="btn btn-cash" disabled={busy || poor} onClick={() => buy(item, true)}>
-                      {item.type === "food" ? "Comer" : "Ir"}
+            <div key={item.id} style={{ display: "contents" }}>
+              {heading}
+              <div className={"rpg-item" + (lock ? " locked" : "") + (on ? " equipped" : "")}>
+                <span className="rpg-item-ico">{cosmetic ? <CosmeticPreview item={item} wallet={wallet} /> : item.icon}</span>
+                <div className="rpg-item-info">
+                  <b>{item.name}</b>
+                  <span>{itemText(item)}</span>
+                  <em>
+                    {have ? "Seu" : coins(price)}
+                    {!have && price !== item.price && <s>{item.price.toLocaleString("pt-BR")}</s>}
+                  </em>
+                </div>
+                <div className="rpg-item-act">
+                  {have ? (
+                    on ? (
+                      <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => unequip(item)}>
+                        ✓ Equipado
+                      </button>
+                    ) : (
+                      <button type="button" className="btn btn-cash" disabled={busy} onClick={() => equip(item)}>
+                        Equipar
+                      </button>
+                    )
+                  ) : lock ? (
+                    <span className="rpg-lock">🔒 {lock}</span>
+                  ) : consumable ? (
+                    <>
+                      <button type="button" className="btn btn-cash" disabled={busy || poor} onClick={() => buy(item, true)}>
+                        {item.type === "food" ? "Comer" : "Ir"}
+                      </button>
+                      <button type="button" className="btn btn-ghost" disabled={busy || poor} onClick={() => buy(item, false)} title="Guardar na mochila">
+                        🎒
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className="btn btn-gradient" disabled={busy || poor} onClick={() => buy(item, false)}>
+                      Comprar
                     </button>
-                    <button type="button" className="btn btn-ghost" disabled={busy || poor} onClick={() => buy(item, false)} title="Guardar na mochila">
-                      🎒
-                    </button>
-                  </>
-                ) : (
-                  <button type="button" className="btn btn-gradient" disabled={busy || poor} onClick={() => buy(item, false)}>
-                    Comprar
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -500,10 +566,10 @@ export function EcoRanking() {
             return (
               <div key={w.id} className={"rank-row" + (w.id === user.uid ? " me" : "")}>
                 <span className="rank-pos">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}º`}</span>
-                {w.persona?.emoji ? <span className="rpg-ava sm">{w.persona.emoji}</span> : <Avatar src={w.photoURL} name={w.nickname} size={30} />}
+                {w.persona?.emoji ? <PersonaAvatar wallet={w} size="sm" /> : <Avatar src={w.photoURL} name={w.nickname} size={30} />}
                 <div className="rank-name">
                   <b>
-                    {w.persona.name} <small className="muted">({w.nickname})</small>
+                    <PersonaName wallet={w} /> <small className="muted">({w.nickname})</small>
                   </b>
                   <span>
                     {CLASSES[w.persona.cls]?.icon} {CLASSES[w.persona.cls]?.name} · {t.icon} {t.name}

@@ -2,14 +2,18 @@
 //
 // - Persona: nome, avatar, classe (dá um bônus) e uma bio. Fica na própria carteira
 //   (wallets/{uid}.persona), junto com nível, energia, humor, pontos sociais e o inventário.
-// - Energia: trabalhar cansa (−20). Volta sozinha (+10 por hora) ou comendo no Mercado.
+// - Trabalhar é um minigame (components/WorkGame.jsx), sem espera entre um turno e outro. Quanto
+//   melhor você faz as tarefas, mais ganha.
+// - Energia: cada turno cansa (−6) e energia baixa reduz o salário (até −25%), mas nunca impede de
+//   trabalhar. Volta sozinha (+10 por hora) ou comendo no Mercado.
 // - Humor: cai devagar (−1 por hora) e sobe com lazer e caridade. Humor alto = salário maior.
 // - XP e nível: trabalhar, estudar e ajudar os outros dá XP. Cada nível aumenta o salário e
 //   libera cursos, casas e carros melhores. Subiu de nível: prêmio em moedas e energia cheia.
 // - Pontos sociais (reputação): sobem com caridade e caem com roubo. Dão títulos e desconto
 //   nas lojas; quem tem fama de ladrão paga mais caro.
 // - Lojas: comida (energia), lazer (humor), escola (cursos = salário maior), casas (energia
-//   máxima e humor mínimo), veículos (trabalha com menos espera), utilidades (alarme, pets).
+//   máxima e humor mínimo), veículos (salário maior), utilidades (alarme, pets) e visual
+//   (molduras para o avatar, tags junto ao nome e cores de nome).
 //
 // Tudo em transações do Firestore, como o resto da economia.
 
@@ -47,6 +51,7 @@ const ANY_JOBS = [["entregou panfletos no centro", "📄"], ["fez café para a e
 /* ---------------- lojas ---------------- */
 // type: food (energia/humor, vai para o inventário) · fun (humor) · course (uma vez, salário +10%)
 //       house · vehicle (um de cada; trocar vende o antigo pela metade) · pet (uma vez) · item (inventário)
+//       frame · tag · color (visual: comprou uma vez, é seu; equipa um de cada tipo)
 export const SHOPS = [
   {
     id: "mercado",
@@ -104,12 +109,12 @@ export const SHOPS = [
     id: "veiculos",
     name: "Veículos",
     icon: "🚗",
-    desc: "Chega mais rápido no trabalho: menos espera entre um turno e outro.",
+    desc: "Chega melhor no trabalho: cada turno rende mais.",
     items: [
-      { id: "bike", name: "Bicicleta", icon: "🚲", price: 1200, type: "vehicle", tier: 1, cooldown: 10 },
-      { id: "moto", name: "Moto", icon: "🛵", price: 6000, type: "vehicle", tier: 2, cooldown: 20, minLevel: 3 },
-      { id: "carro", name: "Carro", icon: "🚙", price: 18000, type: "vehicle", tier: 3, cooldown: 30, pay: 0.05, minLevel: 6 },
-      { id: "heli", name: "Helicóptero", icon: "🚁", price: 90000, type: "vehicle", tier: 4, cooldown: 40, pay: 0.1, minLevel: 15 },
+      { id: "bike", name: "Bicicleta", icon: "🚲", price: 1200, type: "vehicle", tier: 1, pay: 0.02 },
+      { id: "moto", name: "Moto", icon: "🛵", price: 6000, type: "vehicle", tier: 2, pay: 0.05, minLevel: 3 },
+      { id: "carro", name: "Carro", icon: "🚙", price: 18000, type: "vehicle", tier: 3, pay: 0.08, minLevel: 6 },
+      { id: "heli", name: "Helicóptero", icon: "🚁", price: 90000, type: "vehicle", tier: 4, pay: 0.15, minLevel: 15 },
     ],
   },
   {
@@ -124,7 +129,39 @@ export const SHOPS = [
       { id: "papagaio", name: "Papagaio fofoqueiro", icon: "🦜", price: 1500, type: "pet", desc: "+10% de XP." },
     ],
   },
+  {
+    id: "visual",
+    name: "Visual",
+    icon: "✨",
+    desc: "Molduras para o avatar, tags junto ao nome e cores de nome. Todo mundo vê. Você equipa um de cada tipo.",
+    items: [
+      // molduras do avatar (fx = estilo no CSS: .fx-frame-<fx>)
+      { id: "f-bronze", name: "Moldura de bronze", icon: "🥉", price: 800, type: "frame", fx: "bronze" },
+      { id: "f-prata", name: "Moldura de prata", icon: "🥈", price: 2000, type: "frame", fx: "silver", minLevel: 2 },
+      { id: "f-ouro", name: "Moldura de ouro", icon: "🥇", price: 5000, type: "frame", fx: "gold", minLevel: 4 },
+      { id: "f-neon", name: "Moldura neon", icon: "💠", price: 7500, type: "frame", fx: "neon", minLevel: 5 },
+      { id: "f-fogo", name: "Moldura de fogo", icon: "🔥", price: 12000, type: "frame", fx: "fire", minLevel: 7 },
+      { id: "f-arcoiris", name: "Moldura arco-íris", icon: "🌈", price: 18000, type: "frame", fx: "rainbow", minLevel: 9 },
+      { id: "f-diamante", name: "Moldura de diamante", icon: "💎", price: 40000, type: "frame", fx: "diamond", minLevel: 12 },
+      // tags que aparecem junto ao nome (fx = .fx-tag-<fx>)
+      { id: "t-novato", name: "Tag Novato", icon: "🌱", price: 300, type: "tag", label: "NOVATO", fx: "green" },
+      { id: "t-dev", name: "Tag Dev", icon: "💻", price: 2500, type: "tag", label: "DEV", fx: "blue" },
+      { id: "t-vip", name: "Tag VIP", icon: "⭐", price: 3000, type: "tag", label: "VIP", fx: "gold" },
+      { id: "t-fofoca", name: "Tag Fofoqueiro", icon: "🦜", price: 4000, type: "tag", label: "FOFOQUEIRO", fx: "pink", minLevel: 2 },
+      { id: "t-chefe", name: "Tag Chefe", icon: "👔", price: 6000, type: "tag", label: "CHEFE", fx: "purple", minLevel: 4 },
+      { id: "t-magnata", name: "Tag Magnata", icon: "💰", price: 30000, type: "tag", label: "MAGNATA", fx: "gold", minLevel: 8 },
+      { id: "t-lenda", name: "Tag Lenda", icon: "🏆", price: 25000, type: "tag", label: "LENDA", fx: "fire", minLevel: 10 },
+      // cores do nome (fx = .fx-name-<fx>)
+      { id: "c-azul", name: "Nome azul", icon: "🔵", price: 1000, type: "color", fx: "blue" },
+      { id: "c-dourado", name: "Nome dourado", icon: "🟡", price: 4000, type: "color", fx: "gold" },
+      { id: "c-por-do-sol", name: "Nome pôr do sol", icon: "🌅", price: 9000, type: "color", fx: "sunset", minLevel: 5 },
+      { id: "c-arcoiris", name: "Nome arco-íris", icon: "🌈", price: 15000, type: "color", fx: "rainbow", minLevel: 8 },
+    ],
+  },
 ];
+export const COSMETIC_TYPES = ["frame", "tag", "color"];
+export const COSMETIC_LABELS = { frame: "Molduras", tag: "Tags", color: "Cores do nome" };
+export const isCosmetic = (item) => COSMETIC_TYPES.includes(item?.type);
 export const ITEMS = Object.fromEntries(SHOPS.flatMap((s) => s.items.map((i) => [i.id, { ...i, shop: s.id }])));
 
 /* ---------------- caridade ---------------- */
@@ -198,18 +235,22 @@ export function xpMultiplier(w) {
   return 1 + (cls(w).xp || 0) + (ownsPet(w, "papagaio") ? 0.1 : 0);
 }
 export function payMultiplier(w, now = Date.now()) {
-  const { level, mood } = liveStats(w, now);
+  const { level, mood, energy, maxEnergy: maxE } = liveStats(w, now);
   const courses = Object.keys(w?.courses || {}).length;
   return (
     (1 + 0.06 * (level - 1)) *
     (1 + (cls(w).pay || 0)) *
     (1 + 0.1 * courses) *
     (1 + (owned(w, "vehicle")?.pay || 0)) *
-    (0.8 + mood / 250) // humor 0 → 80%, 50 → 100%, 100 → 120%
+    (0.8 + mood / 250) * // humor 0 → 80%, 50 → 100%, 100 → 120%
+    (0.75 + 0.25 * (energy / maxE)) // energia 0 → 75%, cheia → 100%
   );
 }
-export function workCooldown(w) {
-  return (60 - (owned(w, "vehicle")?.cooldown || 0)) * 60000;
+
+// Visual equipado (moldura, tag, cor do nome). Só vale se a pessoa realmente tem o item.
+export function equippedOf(w, type) {
+  const id = w?.equipped?.[type];
+  return id && w?.cosmetics?.[id] ? ITEMS[id] || null : null;
 }
 export function shopDiscount(w) {
   return (cls(w).discount || 0) + titleOf(w?.social).discount;
@@ -291,27 +332,32 @@ export async function editPersona(uid, { name, emoji, cls: c, bio }) {
   });
 }
 
-/* trabalhar (substitui o trabalho antigo) */
-export async function workShift(uid) {
+/* trabalhar: minigame. Cada turno tem várias tarefas (components/WorkGame.jsx); o jogo manda a
+   nota de cada uma: 1 = certo, 0.5 = meio errado, 0 = errado. Sem espera entre um turno e outro. */
+export const WORK_PAY_MIN = 0.3; // tudo errado: 30% do salário
+export const WORK_PAY_MAX = 1.5; // tudo certo: 150% do salário
+export const workQuality = (ratio) => WORK_PAY_MIN + (WORK_PAY_MAX - WORK_PAY_MIN) * ratio;
+export const WORK_ENERGY_COST = 6;
+
+export async function workShift(uid, results = []) {
+  const scores = (Array.isArray(results) ? results : []).slice(0, 8).map((r) => (Number(r) >= 1 ? 1 : Number(r) >= 0.5 ? 0.5 : 0));
+  if (!scores.length) throw new Error("Faça as tarefas do turno para receber.");
+  const ratio = scores.reduce((a, b) => a + b, 0) / scores.length;
   return runTransaction(db, async (tx) => {
     const w = await readW(tx, uid);
     if (!hasPersona(w)) throw new Error("Crie sua persona antes de trabalhar.");
     const now = Date.now();
-    const left = Math.max(0, (w.lastWork || 0) + workCooldown(w) - now);
-    if (left > 0) throw new Error(`Você está cansado do último turno. Volte em ${Math.ceil(left / 60000)} min.`);
-    const s = liveStats(w, now);
-    if (s.energy < 15) throw new Error(`Sem energia (⚡ ${s.energy}). Coma alguma coisa no Mercado ou espere ela voltar.`);
     const list = [...(JOBS[w.persona.cls] || []), ...ANY_JOBS];
     const [job, emoji] = list[randInt(list.length)];
-    let amount = Math.round((100 + randInt(151)) * payMultiplier(w, now));
-    const tip = rand() < 0.05;
-    if (tip) amount *= 3;
-    const g = gainXp(w, 15 + randInt(11));
+    let amount = Math.max(1, Math.round((100 + randInt(151)) * payMultiplier(w, now) * workQuality(ratio)));
+    const tip = ratio === 1 && rand() < 0.1; // turno perfeito: 10% de chance de gorjeta (dobro)
+    if (tip) amount *= 2;
+    const g = gainXp(w, Math.max(3, Math.round((15 + randInt(11)) * (0.4 + 0.6 * ratio))));
     const bonus = g.up?.bonus || 0;
-    const st = statsUpdate(w, now, { energy: -20 });
+    const st = statsUpdate(w, now, { energy: -WORK_ENERGY_COST });
     if (g.up) st.energy = maxEnergy(w); // subiu de nível: energia cheia
     tx.update(walletRef(uid), { balance: w.balance + amount + bonus, lastWork: now, xp: g.xp, ...st });
-    return { amount, job, emoji, tip, xp: g.add, levelUp: g.up, energy: st.energy };
+    return { amount, job, emoji, tip, xp: g.add, levelUp: g.up, energy: st.energy, ratio, scores };
   });
 }
 
@@ -326,8 +372,9 @@ export async function buyItem(uid, itemId, { qty = 1, use = false } = {}) {
     const lock = lockReason(item, w);
     if (lock) throw new Error(lock.startsWith("Nível") || lock.includes("pontos") ? `Precisa de ${lock}.` : lock + ".");
     const now = Date.now();
-    const single = ["course", "house", "vehicle", "pet"].includes(item.type);
+    const single = ["course", "house", "vehicle", "pet", ...COSMETIC_TYPES].includes(item.type);
     if (single) qty = 1;
+    if (isCosmetic(item) && w.cosmetics?.[item.id]) throw new Error("Você já tem esse item. Equipe na loja Visual.");
     const price = priceOf(item, w) * qty;
     let refund = 0;
     let old = null;
@@ -348,6 +395,9 @@ export async function buyItem(uid, itemId, { qty = 1, use = false } = {}) {
     } else if (item.type === "pet") {
       upd[`pets.${item.id}`] = now;
       Object.assign(upd, statsUpdate(w, now, { mood: 10 }));
+    } else if (isCosmetic(item)) {
+      upd[`cosmetics.${item.id}`] = now;
+      upd[`equipped.${item.type}`] = item.id; // comprou, já equipa
     } else if (use && (item.type === "food" || item.type === "fun")) {
       effect = applyEffect(w, item, now, qty);
       Object.assign(upd, effect.fields);
@@ -364,6 +414,25 @@ export async function buyItem(uid, itemId, { qty = 1, use = false } = {}) {
     }
     tx.update(walletRef(uid), upd);
     return { item, qty, price, refund, old, used: !!effect, effect: effect?.info, levelUp: up };
+  });
+}
+
+// Equipa (ou tira) um item visual que a pessoa já comprou. Um de cada tipo por vez.
+export async function equipCosmetic(uid, itemId) {
+  const item = ITEMS[itemId];
+  if (!isCosmetic(item)) throw new Error("Esse item não se equipa.");
+  return runTransaction(db, async (tx) => {
+    const w = await readW(tx, uid);
+    if (!w.cosmetics?.[itemId]) throw new Error("Você ainda não comprou esse item.");
+    tx.update(walletRef(uid), { [`equipped.${item.type}`]: itemId });
+    return item;
+  });
+}
+export async function unequipCosmetic(uid, type) {
+  if (!COSMETIC_TYPES.includes(type)) throw new Error("Tipo inválido.");
+  return runTransaction(db, async (tx) => {
+    await readW(tx, uid);
+    tx.update(walletRef(uid), { [`equipped.${type}`]: "" });
   });
 }
 

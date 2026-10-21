@@ -5,7 +5,7 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
 import { useCollection } from "../lib/useCollection";
 import { notify } from "../lib/push";
-import { DAILY_AMOUNT, ECONOMY_CHANNEL_ID, canClaimDaily, claimDaily, coins, isAdminEmail, postResult } from "../lib/casino";
+import { DAILY_AMOUNT, ECONOMY_CHANNEL_ID, START_BALANCE, canClaimDaily, claimDaily, coins, isAdminEmail, postResult } from "../lib/casino";
 import {
   LOAN_DAYS,
   LOAN_INTEREST,
@@ -27,11 +27,11 @@ import {
   requestLoan,
   rob,
   withdraw,
-  work,
 } from "../lib/economy";
 import { useWallet } from "./Casino";
 import { Charity, EcoRanking, PersonaForm, PersonaSheet, PersonaStrip, Shops, announceLevelUp } from "./RPG";
-import { hasPersona, liveStats, workCooldown } from "../lib/rpg";
+import { hasPersona, liveStats } from "../lib/rpg";
+import WorkGame from "./WorkGame";
 import Avatar from "./Avatar";
 
 const post = (user, profile, g) => postResult(user, profile, g, ECONOMY_CHANNEL_ID).catch(() => {});
@@ -393,14 +393,14 @@ export function LoanCard({ id }) {
 function Rules() {
   return (
     <div className="eco-rules">
-      <p>Moedas de mentira, só para diversão. Todo mundo começa com 🪙 1.000 e cria uma persona que vive na cidade.</p>
+      <p>Moedas de mentira, só para diversão. Todo mundo começa com 🪙 22.000 e cria uma persona que vive na cidade.</p>
       <ul>
         <li><b>🧑 Persona</b> — nome, avatar e classe. Cada classe tem um bônus (salário, XP, desconto, caridade, roubo…). Trocar de classe custa 🪙 1.000.</li>
         <li><b>⭐ Nível</b> — trabalhar, estudar, viajar e doar dá XP. Cada nível aumenta o salário em 6% e libera itens melhores. Subiu: prêmio em moedas e energia cheia.</li>
-        <li><b>⚡ Energia</b> — cada turno de trabalho gasta 20. Volta sozinha (+10 por hora) ou comendo no Mercado. Abaixo de 15 não dá para trabalhar.</li>
+        <li><b>⚡ Energia</b> — cada turno de trabalho gasta 6. Volta sozinha (+10 por hora) ou comendo no Mercado. Energia baixa reduz o salário (até −25%), mas nunca impede de trabalhar.</li>
         <li><b>😊 Humor</b> — cai 1 por hora e sobe com lazer, caridade e compras grandes. Humor 0 paga 80% do salário; humor 100 paga 120%.</li>
-        <li><b>💼 Trabalhar</b> — ganha de 🪙 100 a 🪙 250 vezes o seu bônus (nível, classe, cursos, veículo e humor). 5% de chance de gorjeta (o triplo). Espera de 1 h, menos com veículo.</li>
-        <li><b>🛍️ Lojas</b> — Mercado (energia), Lazer (humor), Escola (+10% de salário por curso), Imóveis (energia máxima e humor mínimo), Veículos (menos espera e mais salário) e Utilidades (alarme e pets). Trocar de casa ou carro vende o antigo pela metade.</li>
+        <li><b>💼 Trabalhar</b> — é um minigame: cada turno tem 5 tarefas (troco, digitação, memória, ordenar preços). Fez certo, ganha mais (até 150% do salário); meio errado, ganha menos; tudo errado paga só 30%. Sem espera: trabalhe o quanto quiser. O salário base é de 🪙 100 a 🪙 250 vezes o seu bônus (nível, classe, cursos, veículo, humor e energia). Turno perfeito tem 10% de chance de gorjeta (o dobro).</li>
+        <li><b>🛍️ Lojas</b> — Mercado (energia), Lazer (humor), Escola (+10% de salário por curso), Imóveis (energia máxima e humor mínimo), Veículos (mais salário), Utilidades (alarme e pets) e Visual (molduras para o avatar, tags junto ao nome e cores de nome). Trocar de casa ou carro vende o antigo pela metade.</li>
         <li><b>💝 Caridade</b> — doe para as causas da cidade: 1 ponto social a cada 🪙 10, mais XP e humor. Pontos sociais dão títulos e descontos de até 15% nas lojas.</li>
         <li><b>🎁 Bônus diário</b> — 🪙 {DAILY_AMOUNT} uma vez por dia.</li>
         <li><b>🏦 Banco</b> — guardar e sacar é grátis. O banco não pode ser roubado; apostas, compras e pagamentos usam só a carteira.</li>
@@ -465,7 +465,7 @@ function Admin({ wallets, onMsg }) {
         className="btn btn-danger-solid"
         disabled={busy}
         onClick={() => {
-          if (confirm("Zerar a economia? Todo mundo volta para 🪙 1.000, banco zerado e estatísticas apagadas.")) run(() => adminResetAll(list.map((w) => w.id)), "Economia zerada.")();
+          if (confirm(`Zerar a economia? Todo mundo volta para ${coins(START_BALANCE)}, banco zerado e estatísticas apagadas.`)) run(() => adminResetAll(list.map((w) => w.id)), "Economia zerada.")();
         }}
       >
         Zerar economia
@@ -495,16 +495,13 @@ export function EconomyBar() {
     setTimeout(() => setMsg(null), 3500);
   };
 
-  async function doWork() {
-    try {
-      if (!hasPersona(wallet)) return setOpen("create");
-      const r = await work(user.uid);
-      say(`${r.emoji} Você ${r.job} e ganhou ${coins(r.amount)}${r.tip ? " (com gorjeta! 🤑)" : ""} · +${r.xp} XP${r.levelUp ? ` · ⭐ Nível ${r.levelUp.to}! +${coins(r.levelUp.bonus)}` : ""}`);
-      post(user, profile, { type: "work", bet: 0, payout: r.amount, text: `${r.job} e ganhou ${coins(r.amount)}${r.tip ? " 🤑" : ""}`, detail: `${r.emoji} ${wallet.persona.name} ${r.job}` });
-      announceLevelUp(user, profile, r.levelUp);
-    } catch (e) {
-      say(e.message, true);
-    }
+  // Trabalhar abre o minigame (sem espera entre um turno e outro). O pagamento sai quando o turno acaba.
+  function doWork() {
+    setOpen(hasPersona(wallet) ? "work" : "create");
+  }
+  function onWorkFinished(r) {
+    // Não posta cada turno no canal (dá para trabalhar à vontade); só avisa quando sobe de nível.
+    announceLevelUp(user, profile, r.levelUp);
   }
   async function doDaily() {
     try {
@@ -516,7 +513,6 @@ export function EconomyBar() {
     }
   }
 
-  const workLeft = cooldownLeft(wallet?.lastWork, workCooldown(wallet));
   const stats = hasPersona(wallet) ? liveStats(wallet, now) : null;
   const robLeft = cooldownLeft(wallet?.lastRob, ROB_COOLDOWN);
   void now;
@@ -531,6 +527,7 @@ export function EconomyBar() {
     create: ["🧑 Criar persona", <PersonaForm key="c" wallet={wallet} onMsg={say} onDone={() => setOpen("persona")} />],
     edit: ["✏️ Editar persona", <PersonaForm key="e" wallet={wallet} onMsg={say} onDone={() => setOpen("persona")} />],
     persona: ["🧑 Ficha da persona", <PersonaSheet key="s" wallet={wallet} onMsg={say} onEdit={() => setOpen("edit")} onShop={() => setOpen("shops")} />],
+    work: ["💼 Turno de trabalho", <WorkGame key="w" wallet={wallet} onFinished={onWorkFinished} onClose={() => setOpen(null)} onNeedPersona={() => setOpen("create")} />],
     shops: ["🛍️ Lojas", <Shops key="h" wallet={wallet} onMsg={say} />],
     charity: ["💝 Caridade", <Charity key="y" wallet={wallet} onMsg={say} />],
     admin: ["⚙️ Administração", <Admin key="a" wallets={walletsList} onMsg={say} />],
@@ -568,7 +565,7 @@ export function EconomyBar() {
           <span className="cg-icon">💼</span>
           <span className="cg-text">
             <b>Trabalhar</b>
-            <span>{!stats ? "crie a persona" : workLeft ? `em ${fmtWait(workLeft)}` : stats.energy < 15 ? "sem energia ⚡" : "−20 ⚡ · +XP"}</span>
+            <span>{!stats ? "crie a persona" : "minigame · sem espera"}</span>
           </span>
         </button>
         <button type="button" className="casino-game g-shop" onClick={() => setOpen(hasPersona(wallet) ? "shops" : "create")} disabled={!wallet}>
