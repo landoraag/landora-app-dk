@@ -69,7 +69,7 @@ export default function Inicio() {
   const { data: clients } = useCollection("clients", "createdAt", "desc");
   const { data: pages } = useCollection("landingPages", "createdAt", "desc");
   const { data: channels } = useCollection("channels", "createdAt", "asc");
-  const { data: messages } = useCollection("chatMessages", "createdAt", "asc");
+  const { data: messages } = useCollection("chatMessages", "createdAt", "asc", 300);
   const { data: calls } = useCollection("calls", "createdAt", "asc");
 
   // Até onde eu já li em cada canal (o mesmo que o Chat usa).

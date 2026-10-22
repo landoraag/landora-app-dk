@@ -56,7 +56,7 @@ const WARM = [
   ["settings"],
   ["leads", "createdAt", "desc"],
   ["channels", "createdAt", "asc"],
-  ["chatMessages", "createdAt", "asc"],
+  ["chatMessages", "createdAt", "asc", 300],
   ["calls", "createdAt", "asc"],
   ["channelCategories", "createdAt", "asc"],
   ["users", "createdAt", "asc"],

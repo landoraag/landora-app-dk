@@ -478,7 +478,7 @@ function VoiceLobby({ c, onJoin, error }) {
 export default function Chat() {
   const { data: categories } = useCollection("channelCategories", "createdAt", "asc");
   const { data: channels } = useCollection("channels", "createdAt", "asc");
-  const { data: allMessages } = useCollection("chatMessages", "createdAt", "asc");
+  const { data: allMessages } = useCollection("chatMessages", "createdAt", "asc", 300);
   const { data: users } = useCollection("users", "createdAt", "asc");
   const { data: calls, loading: callsLoading } = useCollection("calls", "createdAt", "asc");
   const { user, profile } = useAuth();

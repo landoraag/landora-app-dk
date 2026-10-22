@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "./firebase";
 
 // Os dados de cada lista ficam guardados em memória e são compartilhados entre as telas.
@@ -9,11 +9,11 @@ import { db } from "./firebase";
 const stores = new Map();
 const LINGER_MS = 60000; // mantém a lista viva 1 min depois que ninguém usa (voltar à aba é instantâneo)
 
-function getStore(name, orderField, direction) {
-  const key = `${name}|${orderField || ""}|${direction}`;
+function getStore(name, orderField, direction, max = 0) {
+  const key = `${name}|${orderField || ""}|${direction}|${max}`;
   let s = stores.get(key);
   if (!s) {
-    s = { name, orderField, direction, data: [], loaded: false, subs: new Set(), refs: 0, unsub: null, timer: null };
+    s = { name, orderField, direction, max, data: [], loaded: false, subs: new Set(), refs: 0, unsub: null, timer: null };
     stores.set(key, s);
   }
   return s;
@@ -26,7 +26,8 @@ function retain(s, cb) {
   s.timer = null;
   if (!s.unsub) {
     const ref = collection(db, s.name);
-    const q = s.orderField ? query(ref, orderBy(s.orderField, s.direction)) : ref;
+    // max: só as últimas N (economiza leituras do Firestore em listas que crescem sem parar).
+    const q = s.orderField ? query(ref, orderBy(s.orderField, s.direction), ...(s.max ? [limitToLast(s.max)] : [])) : ref;
     s.unsub = onSnapshot(
       q,
       (snap) => {
@@ -56,17 +57,17 @@ function retain(s, cb) {
   };
 }
 
-export function useCollection(name, orderField = null, direction = "asc") {
-  const s = getStore(name, orderField, direction);
+export function useCollection(name, orderField = null, direction = "asc", max = 0) {
+  const s = getStore(name, orderField, direction, max);
   const [state, setState] = useState(() => ({ data: s.data, loading: !s.loaded }));
 
   useEffect(() => {
-    const st = getStore(name, orderField, direction);
+    const st = getStore(name, orderField, direction, max);
     const sync = () => setState({ data: st.data, loading: !st.loaded });
     const release = retain(st, sync);
     sync();
     return release;
-  }, [name, orderField, direction]);
+  }, [name, orderField, direction, max]);
 
   return state;
 }
@@ -75,7 +76,7 @@ export function useCollection(name, orderField = null, direction = "asc") {
 // abrirem prontas.
 export function useWarmCollections(list) {
   useEffect(() => {
-    const releases = list.map(([name, orderField = null, direction = "asc"]) => retain(getStore(name, orderField, direction), () => {}));
+    const releases = list.map(([name, orderField = null, direction = "asc", max = 0]) => retain(getStore(name, orderField, direction, max), () => {}));
     return () => releases.forEach((r) => r());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }
