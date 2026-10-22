@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useCollection } from "../../lib/useCollection";
+import { useChannelMessages } from "../../lib/useChannelMessages";
 import { useAuth } from "../../context/AuthContext";
 import Avatar from "../Avatar";
 import { NameWithTag } from "../Cosmetics";
@@ -478,7 +479,7 @@ function VoiceLobby({ c, onJoin, error }) {
 export default function Chat() {
   const { data: categories } = useCollection("channelCategories", "createdAt", "asc");
   const { data: channels } = useCollection("channels", "createdAt", "asc");
-  const { data: allMessages } = useCollection("chatMessages", "createdAt", "asc", 300);
+  const { data: allMessages } = useCollection("chatMessages", "createdAt", "asc", 20);
   const { data: users } = useCollection("users", "createdAt", "asc");
   const { data: calls, loading: callsLoading } = useCollection("calls", "createdAt", "asc");
   const { user, profile } = useAuth();
@@ -590,10 +591,14 @@ export default function Chat() {
   const inCasino = !voiceId && isCasinoChannel(activeChannel);
   const inEconomy = !voiceId && isEconomyChannel(activeChannel);
 
-  const messages = useMemo(
-    () => allMessages.filter((m) => m.channelId === activeChannel?.id),
-    [allMessages, activeChannel]
-  );
+  // Só as últimas 20 do canal aberto (as novas chegam ao vivo). Nos canais normais há o botão
+  // "carregar mais antigas" (100 de cada vez); no cassino e na economia ficam só as 20.
+  const {
+    messages,
+    hasMore,
+    loadingMore,
+    loadMore,
+  } = useChannelMessages(!voiceId ? activeChannel?.id : null, { older: !isCasinoChannel(activeChannel) && !isEconomyChannel(activeChannel) });
   const pinned = useMemo(() => messages.filter((m) => m.pinned), [messages]);
 
   /* ----- não lidas: até onde cada pessoa já leu em cada canal (chatReads/{uid}) ----- */
@@ -761,7 +766,18 @@ export default function Chat() {
     scrollListToEnd(!changed);
     // depois que imagens carregarem, garante o fim
     if (changed) setTimeout(() => scrollListToEnd(false), 350);
-  }, [messages.length, activeChannel?.id]);
+    // só a mensagem mais nova rola para o fim (carregar antigas não pode pular a tela)
+  }, [messages[messages.length - 1]?.id, activeChannel?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Carregar mensagens antigas mantém a leitura no mesmo lugar (não pula para o fim).
+  async function loadOlder() {
+    const c = listRef.current;
+    const before = c ? c.scrollHeight - c.scrollTop : 0;
+    await loadMore();
+    requestAnimationFrame(() => {
+      if (c) c.scrollTop = c.scrollHeight - before;
+    });
+  }
 
   // Trocar de canal limpa o que estava em andamento.
   useEffect(() => {
@@ -1302,6 +1318,11 @@ export default function Chat() {
             if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0;
           }}
         >
+          {hasMore && !searchOpen && (
+            <button type="button" className="btn btn-ghost chat-older" disabled={loadingMore} onClick={loadOlder}>
+              {loadingMore ? "Carregando…" : "⬆️ Carregar mensagens mais antigas"}
+            </button>
+          )}
           {shownMessages.map((m) => (
             <Message
               key={m.id}

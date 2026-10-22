@@ -2599,3 +2599,5 @@ html.has-pseudo-fs .telao-stage.is-fs { position: fixed; inset: 0; z-index: 1000
 .uno-card.back { background: #111827; } .uno-logo { color: #ef4444; font-size: .8rem; }
 .uno-colors { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: .78rem; } .uno-color { padding: 6px 10px; border-radius: 8px; border: 0; color: #fff; font-weight: 700; cursor: pointer; } .uno-color.c-R { background: #dc2626; } .uno-color.c-Y { background: #ca8a04; } .uno-color.c-G { background: #16a34a; } .uno-color.c-B { background: #2563eb; }
 @media (max-width: 640px) { .pvp-games { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.chat-older { align-self: center; margin: 8px auto; font-size: .82rem; flex-shrink: 0; }
