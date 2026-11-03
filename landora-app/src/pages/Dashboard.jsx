@@ -23,6 +23,8 @@ const PAGE_LOADERS = {
   Perfil: () => import("../components/tabs/Perfil"),
   Leads: () => import("../components/tabs/Leads"),
   Tarefas: () => import("../components/tabs/Tarefas"),
+  Agenda: () => import("../components/tabs/Agenda"),
+  Metas: () => import("../components/tabs/Metas"),
 };
 const Inicio = lazyPage(PAGE_LOADERS.Inicio);
 const LandingPages = lazyPage(PAGE_LOADERS.LandingPages);
@@ -34,6 +36,8 @@ const Chat = lazyPage(PAGE_LOADERS.Chat);
 const Perfil = lazyPage(PAGE_LOADERS.Perfil);
 const Leads = lazyPage(PAGE_LOADERS.Leads);
 const Tarefas = lazyPage(PAGE_LOADERS.Tarefas);
+const Agenda = lazyPage(PAGE_LOADERS.Agenda);
+const Metas = lazyPage(PAGE_LOADERS.Metas);
 const PATH_LOADER = {
   "/inicio": PAGE_LOADERS.Inicio,
   "/landing-pages": PAGE_LOADERS.LandingPages,
@@ -45,6 +49,8 @@ const PATH_LOADER = {
   "/perfil": PAGE_LOADERS.Perfil,
   "/leads": PAGE_LOADERS.Leads,
   "/tarefas": PAGE_LOADERS.Tarefas,
+  "/agenda": PAGE_LOADERS.Agenda,
+  "/metas": PAGE_LOADERS.Metas,
 };
 const WARM = [
   ["landingPages", "createdAt", "desc"],
@@ -52,6 +58,9 @@ const WARM = [
   ["financeEntries", "date", "desc"],
   ["clients", "createdAt", "desc"],
   ["tasks", "createdAt", "desc"],
+  ["events", "date", "asc"],
+  ["goals", "createdAt", "asc"],
+  ["goalLogs", "createdAt", "asc"],
   ["subscriptions", "createdAt", "desc"],
   ["settings"],
   ["leads", "createdAt", "desc"],
@@ -74,6 +83,8 @@ const TABS = [
   { to: "/inicio", label: "Início", icon: "home" },
   { to: "/landing-pages", label: "Pages", icon: "pages" },
   { to: "/tarefas", label: "Tarefas", icon: "tarefas" },
+  { to: "/agenda", label: "Agenda", icon: "agenda" },
+  { to: "/metas", label: "Metas", icon: "metas" },
   { to: "/leads", label: "Leads", icon: "leads" },
   { to: "/clientes", label: "Clientes", icon: "clientes" },
   { to: "/vendas", label: "Vendas", icon: "vendas" },
@@ -346,6 +357,8 @@ export default function Dashboard() {
             <Route path="/inicio" element={<Inicio />} />
             <Route path="/landing-pages" element={<LandingPages />} />
             <Route path="/tarefas" element={<Tarefas />} />
+            <Route path="/agenda" element={<Agenda />} />
+            <Route path="/metas" element={<Metas />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/vendas" element={<Vendas />} />

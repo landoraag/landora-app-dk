@@ -14,6 +14,20 @@ const PATHS = {
       <path d="m9 12 2 2 4-4" />
     </>
   ),
+  agenda: (
+    <>
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <path d="M16 2v4" />
+      <path d="M8 2v4" />
+      <path d="M3 10h18" />
+    </>
+  ),
+  metas: (
+    <>
+      <path d="M4 22V4" />
+      <path d="M4 4h13l-2 4 2 4H4" />
+    </>
+  ),
   leads: (
     <>
       <circle cx="12" cy="12" r="10" />

@@ -16,6 +16,11 @@ export async function toggleTaskDone(task) {
   });
 }
 
+// Tira o prazo de uma tarefa (deixa a data vazia).
+export async function clearTaskDue(task) {
+  await updateDoc(doc(db, "tasks", task.id), { dueDate: "", updatedAt: serverTimestamp() });
+}
+
 // Uma linha de tarefa (usada na aba Tarefas e dentro da page).
 export function TaskItem({ task, onOpen, onGoPage, showPage = true }) {
   const pr = priorityOf(task.priority);
@@ -44,6 +49,18 @@ export function TaskItem({ task, onOpen, onGoPage, showPage = true }) {
             <span className={"task-chip" + (late ? " late" : "")}>
               {late ? "Atrasada · " : "Prazo "}
               {formatDate(task.dueDate)}
+              <button
+                type="button"
+                className="task-chip-x"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearTaskDue(task);
+                }}
+                aria-label="Remover prazo"
+                title="Remover prazo"
+              >
+                ✕
+              </button>
             </span>
           )}
           {showPage && task.pageId && (
@@ -177,6 +194,15 @@ export function TaskFormModal({ task, presetPageId = "", pages = [], onClose }) 
             <label>
               Prazo (opcional)
               <input type="date" value={form.dueDate} onChange={set("dueDate")} />
+              {form.dueDate && (
+                <button
+                  type="button"
+                  className="btn-link task-clear-due"
+                  onClick={() => setForm({ ...form, dueDate: "" })}
+                >
+                  ✕ Remover prazo
+                </button>
+              )}
             </label>
           </div>
 

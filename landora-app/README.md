@@ -14,6 +14,12 @@ Feito em React + Vite, usando **Firebase** (Auth + Firestore) como backend e **C
 
 ---
 
+## Agenda e Metas
+
+- **Agenda** — calendário do mês com reuniões, "dias de fazer algo" e as **tarefas com prazo** (aparecem sozinhas no dia do prazo; as atrasadas ficam destacadas). Cada compromisso tem o botão **➕ Google** (abre o Google Agenda já preenchido) e o menu **Google Agenda → Baixar agenda (.ics)** exporta tudo para importar em qualquer agenda.
+- **Conexão direta com o Google Agenda (opcional)** — no Google Cloud: ative a *Google Calendar API*, crie um *ID do cliente OAuth* (aplicativo da Web), autorize o endereço do app em *Origens JavaScript autorizadas* e ponha no `.env`: `VITE_GOOGLE_CLIENT_ID=...`. Depois, em Agenda → Google Agenda → **Conectar**, os compromissos podem ser enviados ao Google e os eventos de lá aparecem na agenda. Sem isso, o link e o .ics continuam funcionando.
+- **Metas** — metas por dia, semana ou mês: *vendas* (conta as da aba Vendas), *prospecções* (leads novos), *reuniões* (da Agenda) são automáticas; *contatos feitos* e *outras* usam o botão **+1**. O progresso recomeça sozinho a cada período.
+
 ## 1. Criar o projeto no Firebase
 
 1. Acesse [console.firebase.google.com](https://console.firebase.google.com/) → **Adicionar projeto** (ex: `landora-app`).
