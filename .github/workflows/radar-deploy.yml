@@ -5,7 +5,7 @@ name: Radar · publicar site
 on:
   push:
     branches: [main]
-    paths: ["radar-prospeccao/**", ".github/workflows/radar-deploy.yml"]
+    paths: ["radar-prospeccao/**", "landora-app/firestore.rules", ".github/workflows/radar-deploy.yml"]
   workflow_dispatch: {}
 
 jobs:
@@ -33,4 +33,6 @@ jobs:
             || npx -y firebase-tools@13.35.1 hosting:sites:create radar-landora --project landora-app-dk
           npx -y firebase-tools@13.35.1 target:apply hosting radar radar-landora --project landora-app-dk
           npx -y firebase-tools@13.35.1 deploy --only hosting:radar --project landora-app-dk --non-interactive
+          # Regras do Firestore (o arquivo do app, que já inclui as regras do Radar)
+          (cd ../landora-app && npx -y firebase-tools@13.35.1 deploy --only firestore:rules --project landora-app-dk --non-interactive)
           rm -f "$RUNNER_TEMP/sa.json"
