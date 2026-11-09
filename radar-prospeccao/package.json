@@ -1,0 +1,19 @@
+{
+  "name": "radar-prospeccao",
+  "private": true,
+  "type": "module",
+  "description": "Radar de Prospecção Landora: empresas sem site em cada cidade, com busca, mapa, funil, metas e equipe.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && firebase deploy --only hosting:radar"
+  },
+  "dependencies": {
+    "firebase": "^10.14.0",
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "vite": "^5.4.6"
+  }
+}
