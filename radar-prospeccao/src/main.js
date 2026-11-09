@@ -202,7 +202,7 @@ function authScreen(mode = "entrar", msg = "") {
     ${mode === "criar" ? `<label class="f">Repita a senha<input type="password" id="aSenha2" autocomplete="new-password" required></label>` : ""}
     <p class="err" id="aErr" ${msg ? "" : "hidden"}>${esc(msg)}</p>
     <button class="btn pri" type="submit" id="aOk">${{ entrar: "Entrar", criar: "Criar conta", esqueci: "Enviar link" }[mode]}</button>
-    ${mode === "entrar" ? `<button class="btn ghost" type="button" data-m="esqueci">Esqueci a senha</button>` : mode === "esqueci" ? `<button class="btn ghost" type="button" data-m="entrar">Voltar para entrar</button>` : `<p class="faint" style="margin:0;font-size:12.5px">Depois de criar a conta, um administrador do Radar aprova o seu acesso.</p>`}
+    ${mode === "entrar" ? `<button class="btn ghost" type="button" data-m="esqueci">Esqueci a senha</button>` : mode === "esqueci" ? `<button class="btn ghost" type="button" data-m="entrar">Voltar para entrar</button>` : `<p class="faint" style="margin:0;font-size:12.5px">Já usa o app Landora? Não precisa criar conta: use “Entrar” com o mesmo e-mail e senha do app. Contas novas esperam um administrador aprovar.</p>`}
   </form></div>`;
   const f = $("#af");
   f.querySelectorAll("[data-m]").forEach((b) => b.addEventListener("click", () => authScreen(b.dataset.m)));
@@ -228,16 +228,23 @@ function authScreen(mode = "entrar", msg = "") {
 async function afterLogin(user) {
   S.user = user;
   $("#root").innerHTML = `<div class="auth"><div class="auth-card"><p class="muted" style="margin:0">Entrando…</p></div></div>`;
-  const [ac, pf] = await Promise.all([getDoc(D("radar_config/acesso")).catch(() => null), getDoc(D("radar_perfis/" + user.uid)).catch(() => null)]);
+  const [ac, pf, app] = await Promise.all([getDoc(D("radar_config/acesso")).catch(() => null), getDoc(D("radar_perfis/" + user.uid)).catch(() => null),
+    getDoc(D("users/" + user.uid)).catch(() => null)]);
+  // Já usa o app Landora: tem cadastro no app e está na lista de acesso do app (config/access).
+  // Com a lista do app desligada não há entrada automática (as regras do Firestore exigem o mesmo).
+  const appAccess = await getDoc(D("config/access")).catch(() => null);
+  const emails = (appAccess?.exists() ? appAccess.data().emails || [] : []).map((x) => String(x).toLowerCase());
+  S.appUser = !!app?.exists() && emails.includes((user.email || "").toLowerCase());
   S.acesso = ac?.exists() ? ac.data() : null;
   S.isAdmin = !!S.acesso && (S.acesso.admins || []).map((x) => x.toLowerCase()).includes((user.email || "").toLowerCase());
   S.perfil = pf?.exists() ? pf.data() : null;
   if (!S.perfil) {
-    const nome = S._novoNome || user.displayName || "";
-    const ok = await W(() => setDoc(D("radar_perfis/" + user.uid), { nome, apelido: nome.split(" ")[0] || "", email: (user.email || "").toLowerCase(), funcao: "", cidades: [], papel: S.isAdmin ? "gestor" : "vendedor", aprovado: S.isAdmin, criadoEm: nowISO() }));
+    const appNome = S.appUser ? (app.data().nickname || "") : "";
+    const nome = S._novoNome || user.displayName || appNome || "";
+    const ok = await W(() => setDoc(D("radar_perfis/" + user.uid), { nome, apelido: appNome || nome.split(" ")[0] || "", email: (user.email || "").toLowerCase(), funcao: "", cidades: [], papel: S.isAdmin ? "gestor" : "vendedor", aprovado: S.isAdmin || S.appUser, doApp: S.appUser, criadoEm: nowISO() }));
     if (ok) S.perfil = (await getDoc(D("radar_perfis/" + user.uid))).data();
   }
-  S.member = S.isAdmin || S.perfil?.aprovado === true;
+  S.member = S.isAdmin || (!S.perfil?.bloqueado && (S.perfil?.aprovado === true || S.appUser));
   if (!S.member) return waitingScreen();
   document.body.classList.remove("is-auth");
   shell(); subscribe(); render();
@@ -246,10 +253,12 @@ async function afterLogin(user) {
 function waitingScreen() {
   const semAdmin = !S.acesso;
   $("#root").innerHTML = `<div class="auth"><div class="auth-card">
-    <div><div class="eyebrow">Radar de Prospecção</div><h1>${semAdmin ? "Primeiro acesso" : "Aguardando aprovação"}</h1></div>
+    <div><div class="eyebrow">Radar de Prospecção</div><h1>${semAdmin ? "Primeiro acesso" : S.perfil?.bloqueado ? "Acesso bloqueado" : "Aguardando aprovação"}</h1></div>
     ${semAdmin ? `<p style="margin:0">O Radar ainda não tem administrador. Se você é o responsável, ative sua conta como administrador: depois é você quem aprova as próximas pessoas.</p>
       <button class="btn pri" id="wAdmin">Sou o administrador: ativar</button>`
-      : `<p style="margin:0">Sua conta <b>${esc(S.user.email)}</b> foi criada. Um administrador do Radar precisa aprovar o acesso na aba Equipe. Esta tela abre sozinha quando for aprovado.</p>`}
+      : S.perfil?.bloqueado ? `<p style="margin:0">O acesso da conta <b>${esc(S.user.email)}</b> ao Radar foi bloqueado por um administrador.</p>`
+      : `<p style="margin:0">Sua conta <b>${esc(S.user.email)}</b> foi criada. Um administrador do Radar precisa aprovar o acesso na aba Equipe. Esta tela abre sozinha quando for aprovado.</p>
+         <p class="faint" style="margin:0;font-size:12.5px">Se você já usa o app Landora, saia e entre com o mesmo e-mail e senha do app: o acesso é liberado na hora.</p>`}
     <button class="btn ghost" id="wOut">Sair</button></div></div>`;
   $("#wOut").addEventListener("click", () => signOut(S.fb.auth));
   $("#wAdmin")?.addEventListener("click", async () => {
@@ -257,7 +266,7 @@ function waitingScreen() {
     if (ok) { await W(() => updateDoc(D("radar_perfis/" + S.user.uid), { aprovado: true, papel: "gestor" })); afterLogin(S.user); }
   });
   if (!semAdmin) {
-    const u = onSnapshot(D("radar_perfis/" + S.user.uid), (s) => { if (s.data()?.aprovado) { u(); afterLogin(S.user); } }, () => {});
+    const u = onSnapshot(D("radar_perfis/" + S.user.uid), (s) => { if (s.data()?.aprovado && !s.data()?.bloqueado) { u(); afterLogin(S.user); } }, () => {});
   }
 }
 
@@ -851,23 +860,23 @@ function vEquipe() {
   const ps = Object.entries(S.perfis).sort((a, b) => (a[1].aprovado === b[1].aprovado ? (a[1].nome || "").localeCompare(b[1].nome || "") : a[1].aprovado ? 1 : -1));
   const r = periodRange("mes");
   const st = (id) => { const ev = S.eventos.filter((e) => e.uid === id && inRange(e.data, r)); return { cont: ev.filter((e) => e.tipo === "contato").length, reun: ev.filter((e) => e.tipo === "reuniao").length, vend: ev.filter((e) => e.tipo === "venda").length, ativos: Object.values(S.funil).filter((f) => f.resp === id && !["fechado", "perdido", "novo"].includes(f.etapa)).length }; };
-  const pend = ps.filter(([, p]) => !p.aprovado).length;
-  return `<div class="head"><div><h2>Equipe</h2><p class="muted">Cada pessoa cria a própria conta (e-mail e senha) na tela de entrada. ${S.isAdmin ? "Você aprova o acesso aqui." : "Um administrador aprova o acesso."}</p></div>
+  const pend = ps.filter(([, p]) => !p.aprovado && !p.bloqueado).length;
+  return `<div class="head"><div><h2>Equipe</h2><p class="muted">Quem já usa o app Landora entra direto com o mesmo login. Contas novas ${S.isAdmin ? "você aprova aqui" : "um administrador aprova"}.</p></div>
     <button class="btn" id="eMe">Editar meu perfil</button></div>
   ${S.isAdmin && pend ? `<div class="notice warn">${pend} pessoa${pend > 1 ? "s" : ""} aguardando aprovação.</div>` : ""}
   <div class="card tbl-wrap"><table class="t"><thead><tr><th>Pessoa</th><th>Função</th><th>Cidades</th><th>Leads ativos</th><th>Contatos no mês</th><th>Reuniões</th><th>Vendas</th>${S.isAdmin ? "<th>Acesso</th>" : ""}</tr></thead><tbody>
-  ${ps.map(([id, p]) => { const s = st(id); return `<tr><td><b>${esc(p.apelido || p.nome)}</b>${id === uid() ? ' <span class="pill pN">você</span>' : ""}<div class="faint" style="font-size:12px">${esc(p.nome || "")} · ${esc(p.email || "")}</div></td><td>${esc(p.funcao || "")}</td><td>${esc((p.cidades || []).join(", ") || "Todas")}</td>
+  ${ps.map(([id, p]) => { const s = st(id); return `<tr><td><b>${esc(p.apelido || p.nome)}</b>${id === uid() ? ' <span class="pill pN">você</span>' : ""}<div class="faint" style="font-size:12px">${esc(p.nome || "")} · ${esc(p.email || "")}${p.doApp ? " · via app Landora" : ""}</div></td><td>${esc(p.funcao || "")}</td><td>${esc((p.cidades || []).join(", ") || "Todas")}</td>
     <td class="mono">${s.ativos}</td><td class="mono">${s.cont}</td><td class="mono">${s.reun}</td><td class="mono">${s.vend}</td>
-    ${S.isAdmin ? `<td>${p.aprovado ? `<select data-role="${esc(id)}" aria-label="Papel">${opt("vendedor", "Vendedor", p.papel)}${opt("gestor", "Gestor", p.papel)}</select> ${id !== uid() ? `<button class="btn sm ghost danger" data-block="${esc(id)}">Bloquear</button>` : ""}` : `<button class="btn sm pri" data-approve="${esc(id)}">Aprovar</button> <button class="btn sm ghost danger" data-deny="${esc(id)}">Recusar</button>`}</td>` : ""}</tr>`; }).join("") || `<tr><td colspan="8" class="muted">Ninguém ainda.</td></tr>`}
+    ${S.isAdmin ? `<td>${p.bloqueado ? `<span class="pill pX">bloqueado</span> <button class="btn sm" data-approve="${esc(id)}">Desbloquear</button>` : p.aprovado ? `<select data-role="${esc(id)}" aria-label="Papel">${opt("vendedor", "Vendedor", p.papel)}${opt("gestor", "Gestor", p.papel)}</select> ${id !== uid() ? `<button class="btn sm ghost danger" data-block="${esc(id)}">Bloquear</button>` : ""}` : `<button class="btn sm pri" data-approve="${esc(id)}">Aprovar</button> <button class="btn sm ghost danger" data-deny="${esc(id)}">Recusar</button>`}</td>` : ""}</tr>`; }).join("") || `<tr><td colspan="8" class="muted">Ninguém ainda.</td></tr>`}
   </tbody></table></div>
   ${S.isAdmin ? `<div class="card" style="font-size:13.5px"><div class="eyebrow">Administradores</div><p style="margin:6px 0">${esc((S.acesso?.admins || []).join(", "))}</p>
     <div class="row"><input type="email" id="admNew" placeholder="e-mail de outra pessoa da equipe" style="flex:1 1 220px;width:auto"><button class="btn sm" id="admAdd">Tornar administrador</button></div></div>` : ""}`;
 }
 function wireEquipe(root) {
   $("#eMe").addEventListener("click", profileForm);
-  root.querySelectorAll("[data-approve]").forEach((b) => b.addEventListener("click", () => W(() => updateDoc(D("radar_perfis/" + b.dataset.approve), { aprovado: true, aprovadoPor: uid(), aprovadoEm: nowISO() }), "Acesso aprovado")));
+  root.querySelectorAll("[data-approve]").forEach((b) => b.addEventListener("click", () => W(() => updateDoc(D("radar_perfis/" + b.dataset.approve), { aprovado: true, bloqueado: false, aprovadoPor: uid(), aprovadoEm: nowISO() }), "Acesso aprovado")));
   root.querySelectorAll("[data-deny]").forEach((b) => b.addEventListener("click", () => confirmBox("Recusar e apagar este cadastro do Radar?", () => W(() => deleteDoc(D("radar_perfis/" + b.dataset.deny)), "Cadastro recusado"))));
-  root.querySelectorAll("[data-block]").forEach((b) => b.addEventListener("click", () => confirmBox("Bloquear o acesso desta pessoa ao Radar?", () => W(() => updateDoc(D("radar_perfis/" + b.dataset.block), { aprovado: false }), "Acesso bloqueado"))));
+  root.querySelectorAll("[data-block]").forEach((b) => b.addEventListener("click", () => confirmBox("Bloquear o acesso desta pessoa ao Radar?", () => W(() => updateDoc(D("radar_perfis/" + b.dataset.block), { aprovado: false, bloqueado: true }), "Acesso bloqueado"))));
   root.querySelectorAll("[data-role]").forEach((s) => s.addEventListener("change", () => W(() => updateDoc(D("radar_perfis/" + s.dataset.role), { papel: s.value }), "Papel atualizado")));
   $("#admAdd")?.addEventListener("click", async () => { const e = $("#admNew").value.trim().toLowerCase(); if (!e.includes("@")) return;
     const admins = [...new Set([...(S.acesso?.admins || []), e])]; if (await W(() => updateDoc(D("radar_config/acesso"), { admins }), "Administrador adicionado")) { S.acesso = { ...S.acesso, admins }; render(); } });
