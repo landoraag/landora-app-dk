@@ -1,0 +1,4 @@
+{
+  "projects": { "default": "landora-app-dk" },
+  "targets": { "landora-app-dk": { "hosting": { "radar": ["radar-landora"] } } }
+}

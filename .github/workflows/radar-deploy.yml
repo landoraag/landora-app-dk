@@ -1,0 +1,38 @@
+# Publica o site do Radar no Firebase Hosting (site radar-landora do projeto landora-app-dk)
+# sempre que algo em radar-prospeccao/ muda no branch principal.
+name: Radar · publicar site
+
+on:
+  push:
+    branches: [main]
+    paths: ["radar-prospeccao/**", "landora-app/firestore.rules", ".github/workflows/radar-deploy.yml"]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: radar-prospeccao
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: radar-prospeccao/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx -y firebase-tools@13.35.1 hosting:sites:get radar-landora --project landora-app-dk >/dev/null 2>&1 \
+            || npx -y firebase-tools@13.35.1 hosting:sites:create radar-landora --project landora-app-dk
+          npx -y firebase-tools@13.35.1 target:apply hosting radar radar-landora --project landora-app-dk
+          npx -y firebase-tools@13.35.1 deploy --only hosting:radar --project landora-app-dk --non-interactive
+          # Regras do Firestore (o arquivo do app, que já inclui as regras do Radar)
+          (cd ../landora-app && npx -y firebase-tools@13.35.1 deploy --only firestore:rules --project landora-app-dk --non-interactive)
+          rm -f "$RUNNER_TEMP/sa.json"

@@ -60,9 +60,83 @@ service cloud.firestore {
       allow delete: if isMember() && isEconomyAdmin();
     }
 
-    // Todo o resto do app.
+    // Todo o resto do app. As coleções radar_* são do Radar de Prospecção e têm regras próprias abaixo.
     match /{collection}/{document=**} {
-      allow read, write: if collection != "config" && collection != "wallets" && isMember();
+      allow read, write: if collection != "config" && collection != "wallets" && !collection.matches("radar_.*") && isMember();
     }
+
+    // ===================== Radar de Prospecção (pasta radar-prospeccao/) =====================
+    // Conta própria (e-mail e senha). Quem cria conta fica "aguardando aprovação" até um
+    // administrador do Radar aprovar. Administradores: radar_config/acesso → { admins: [e-mails] }.
+    // O pipeline (GitHub Actions) usa a conta de serviço e não passa por estas regras.
+    function radarAccessPath() {
+      return /databases/$(database)/documents/radar_config/acesso;
+    }
+    function radarAdmin() {
+      return signedIn() && exists(radarAccessPath()) && myEmail() in get(radarAccessPath()).data.admins;
+    }
+    function radarProfile() {
+      return /databases/$(database)/documents/radar_perfis/$(request.auth.uid);
+    }
+    function radarMember() {
+      return radarAdmin() || (signedIn() && exists(radarProfile()) && get(radarProfile()).data.aprovado == true);
+    }
+    match /radar_config/acesso {
+      allow read: if signedIn();
+      // O primeiro administrador se cadastra sozinho enquanto o documento não existe.
+      allow create: if signedIn() && request.resource.data.admins is list && myEmail() in request.resource.data.admins;
+      allow update: if radarAdmin() && request.resource.data.admins is list && myEmail() in request.resource.data.admins;
+      allow delete: if false;
+    }
+    match /radar_config/{docId} {
+      allow read: if radarMember();
+      allow write: if radarAdmin() && docId != "acesso";
+    }
+    match /radar_perfis/{uid} {
+      allow read: if radarMember() || (signedIn() && request.auth.uid == uid);
+      // Cada um cria o próprio perfil, sempre como não aprovado (ou aprovado, se for administrador).
+      allow create: if signedIn() && request.auth.uid == uid
+        && (request.resource.data.aprovado == false || radarAdmin())
+        && request.resource.data.papel in ["vendedor", "gestor"];
+      // Cada um edita o próprio perfil, sem mudar aprovação nem papel; o administrador edita qualquer um.
+      allow update: if radarAdmin() || (signedIn() && request.auth.uid == uid
+        && request.resource.data.aprovado == resource.data.aprovado
+        && request.resource.data.papel == resource.data.papel);
+      allow delete: if radarAdmin();
+    }
+    match /radar_base/{document=**} {
+      allow read: if radarMember();
+      allow write: if false;
+    }
+    match /radar_execucoes/{id} {
+      allow read: if radarMember();
+      allow write: if false;
+    }
+    match /radar_pedidos/{id} {
+      allow read: if radarMember();
+      allow create: if radarMember() && request.resource.data.status == "pendente" && request.resource.data.por == request.auth.uid;
+      allow update, delete: if radarAdmin();
+    }
+    match /radar_funil/{id} {
+      allow read, write: if radarMember();
+    }
+    match /radar_eventos/{id} {
+      allow read: if radarMember();
+      allow create: if radarMember() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if radarAdmin();
+    }
+    match /radar_metas/{id} {
+      allow read, write: if radarMember();
+    }
+    match /radar_metaLogs/{id} {
+      allow read: if radarMember();
+      allow create: if radarMember() && request.resource.data.uid == request.auth.uid;
+      allow delete: if radarAdmin();
+    }
+    match /radar_manuais/{id} {
+      allow read, create, update: if radarMember();
+      allow delete: if radarMember() && (resource.data.por == request.auth.uid || radarAdmin());
+    }
+    // radar_state e radar_verificacoes: só o pipeline (conta de serviço).
   }
 }

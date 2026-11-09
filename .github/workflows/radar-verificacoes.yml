@@ -1,0 +1,41 @@
+# Quando o Claude envia resultados da verificação online (Instagram/Facebook) para o branch
+# radar-verificacoes, este workflow grava os resultados no Firestore. A próxima rodada horária
+# do "Radar · atualizar prospecções" aplica e recalcula as notas.
+name: Radar · receber verificações online
+
+on:
+  push:
+    branches: [radar-verificacoes]
+    paths: ["verificacoes/**.json"]
+
+jobs:
+  receber:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r main/radar-prospeccao/pipeline/requirements.txt
+      - name: Gravar no Firestore
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          python3 - <<'PY'
+          import json, glob, os, re, sys
+          sys.path.insert(0, "main/radar-prospeccao/pipeline")
+          import fsio
+          for f in sorted(glob.glob("verificacoes/*.json")):
+              doc_id = os.path.basename(f)[:-5]
+              if fsio.doc(f"radar_verificacoes/{doc_id}").get().exists: continue
+              d = json.load(open(f))
+              itens = {k: v for k, v in (d.get("itens") or {}).items() if re.fullmatch(r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}", k) and isinstance(v, dict)}
+              fsio.doc(f"radar_verificacoes/{doc_id}").set({"data": d.get("data", doc_id[:10]), "itens": itens, "aplicada": False})
+              print("gravado", doc_id, len(itens))
+          PY
