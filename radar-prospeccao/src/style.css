@@ -258,3 +258,19 @@ select option{background:#0f131c;color:var(--ink)}
   .head{justify-content:flex-start}
 }
 @media (max-width:900px) and (prefers-reduced-motion:reduce){.side,.side-scrim{transition:none}}
+
+/* ===================== Dentro do app Landora (aba Prospecção) ===================== */
+.etabs{display:none}
+.embed .side,.embed .mtop,.embed .side-scrim{display:none!important}
+.embed body::before{display:none}
+.embed .app{grid-template-columns:1fr}
+.embed main{padding-block:4px 24px;padding-left:max(4px,env(safe-area-inset-left,0px));padding-right:max(4px,env(safe-area-inset-right,0px))}
+.embed body,.embed .auth{background:transparent}
+.embed .etabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:1280px;margin:0 auto 14px;padding:2px}
+.embed .etabs::-webkit-scrollbar{display:none}
+.embed .etabs a{display:inline-flex;align-items:center;gap:7px;flex:none;padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:#0f131c;color:var(--muted);text-decoration:none;font-size:.86rem;font-weight:500;white-space:nowrap}
+.embed .etabs a:hover{color:var(--ink);border-color:rgba(0,87,255,.45)}
+.embed .etabs a[aria-current="page"]{background:var(--gradient);border-color:transparent;color:#fff}
+.embed .etabs svg{width:16px;height:16px}
+.embed .head>div:first-child>h2{font-size:1.25rem}
+@media (max-width:900px){.embed main{padding-block:0 20px}.embed .head{display:flex}}

@@ -2695,3 +2695,11 @@ html.has-pseudo-fs .telao-stage.is-fs { position: fixed; inset: 0; z-index: 1000
 .agenda-sub { margin: 14px 0 2px; font-size: 0.78rem; font-weight: 600; color: var(--gray-soft); }
 .lp-form input[type="time"] { color-scheme: dark; }
 .lp-form label.agenda-check { flex-direction: row; align-items: center; color: var(--text); font-size: 0.85rem; }
+
+/* ---------- Aba Prospecção (Radar carregado dentro do app) ---------- */
+.radar-tab { margin: -8px -6px 0; }
+.radar-frame { display: block; width: 100%; height: calc(100dvh - 150px); border: 0; background: transparent; color-scheme: dark; }
+@media (min-width: 900px) {
+  .radar-tab { margin: -16px -20px 0; }
+  .radar-frame { height: calc(100dvh - 56px); }
+}

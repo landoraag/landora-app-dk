@@ -25,6 +25,7 @@ const PAGE_LOADERS = {
   Tarefas: () => import("../components/tabs/Tarefas"),
   Agenda: () => import("../components/tabs/Agenda"),
   Metas: () => import("../components/tabs/Metas"),
+  Prospeccao: () => import("../components/tabs/Prospeccao"),
 };
 const Inicio = lazyPage(PAGE_LOADERS.Inicio);
 const LandingPages = lazyPage(PAGE_LOADERS.LandingPages);
@@ -38,6 +39,7 @@ const Leads = lazyPage(PAGE_LOADERS.Leads);
 const Tarefas = lazyPage(PAGE_LOADERS.Tarefas);
 const Agenda = lazyPage(PAGE_LOADERS.Agenda);
 const Metas = lazyPage(PAGE_LOADERS.Metas);
+const Prospeccao = lazyPage(PAGE_LOADERS.Prospeccao);
 const PATH_LOADER = {
   "/inicio": PAGE_LOADERS.Inicio,
   "/landing-pages": PAGE_LOADERS.LandingPages,
@@ -51,6 +53,7 @@ const PATH_LOADER = {
   "/tarefas": PAGE_LOADERS.Tarefas,
   "/agenda": PAGE_LOADERS.Agenda,
   "/metas": PAGE_LOADERS.Metas,
+  "/prospeccao": PAGE_LOADERS.Prospeccao,
 };
 const WARM = [
   ["landingPages", "createdAt", "desc"],
@@ -86,6 +89,7 @@ const TABS = [
   { to: "/agenda", label: "Agenda", icon: "agenda" },
   { to: "/metas", label: "Metas", icon: "metas" },
   { to: "/leads", label: "Leads", icon: "leads" },
+  { to: "/prospeccao", label: "Prospecção", icon: "radar" },
   { to: "/clientes", label: "Clientes", icon: "clientes" },
   { to: "/vendas", label: "Vendas", icon: "vendas" },
   { to: "/financeiro", label: "Financeiro", icon: "financeiro" },
@@ -359,6 +363,7 @@ export default function Dashboard() {
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/metas" element={<Metas />} />
+            <Route path="/prospeccao" element={<Prospeccao />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/vendas" element={<Vendas />} />
