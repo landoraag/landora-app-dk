@@ -194,7 +194,7 @@ const AUTH_ERR = {
 function authScreen(mode = "entrar", msg = "") {
   document.body.classList.add("is-auth");
   $("#root").innerHTML = `<div class="auth"><form class="auth-card" id="af" novalidate>
-    <div><div class="eyebrow">Landora</div><h1>Radar de Prospecção</h1></div>
+    <div><img class="auth-logo" src="/logomarca.png" alt="Landora"><div class="eyebrow">Radar de Prospecção</div></div>
     ${mode !== "esqueci" ? `<div class="auth-tabs" role="tablist"><button type="button" data-m="entrar" aria-pressed="${mode === "entrar"}">Entrar</button><button type="button" data-m="criar" aria-pressed="${mode === "criar"}">Criar conta</button></div>` : `<p class="muted" style="margin:0">Digite seu e-mail. Vamos mandar um link para você criar uma senha nova.</p>`}
     ${mode === "criar" ? `<label class="f">Nome completo<input type="text" id="aNome" autocomplete="name" required></label>` : ""}
     <label class="f">E-mail<input type="email" id="aEmail" autocomplete="email" required></label>
@@ -273,10 +273,10 @@ function waitingScreen() {
 // ============================== estrutura ==============================
 function shell() {
   $("#root").innerHTML = `<div class="app"><aside class="side">
-    <div class="brand">Radar de Prospecção<small>Landora · busca de clientes</small></div>
+    <div class="side-panel"><div class="brand"><img src="/logomarca.png" alt="Landora"><small>Radar de Prospecção</small></div>
     <nav class="nav" id="nav"></nav>
-    <div class="side-foot"><div class="me-chip" id="meChip"></div><span id="dataStamp">—</span><button class="btn sm ghost" id="logout" style="color:inherit;justify-content:flex-start;padding-left:8px">Sair</button></div>
-  </aside><main><div class="wrap" id="view"></div></main></div><nav class="tabbar" id="tabbar"></nav><div id="layer"></div>`;
+    <div class="side-foot"><div class="me-chip" id="meChip"></div><span id="dataStamp">—</span><button class="btn sm ghost" id="logout" style="justify-content:flex-start;padding-left:8px">Sair</button></div>
+  </div></aside><main><div class="wrap" id="view"></div></main></div><nav class="tabbar" id="tabbar"></nav><div id="layer"></div>`;
   $("#logout").addEventListener("click", () => signOut(S.fb.auth));
 }
 function route() { const h = (location.hash || "").slice(1); return ROUTES.some((r) => r.k === h) ? h : "inicio"; }
@@ -285,7 +285,7 @@ function renderSidebar() {
   const links = ROUTES.map((x) => `<a href="#${x.k}" ${x.k === r ? 'aria-current="page"' : ""}>${icon(x.i)}<span>${x.l}</span></a>`).join("");
   $("#nav").innerHTML = links; $("#tabbar").innerHTML = links;
   const me = S.perfis[uid()] || S.perfil || {};
-  $("#meChip").innerHTML = `<span class="dot" style="background:#6FD3B8"></span><span>${esc(me.apelido || me.nome || S.user.email)}${S.isAdmin ? " · admin" : ""}</span>`;
+  $("#meChip").innerHTML = `<span class="dot" style="background:var(--blue-light);box-shadow:0 0 8px var(--glow)"></span><span>${esc(me.apelido || me.nome || S.user.email)}${S.isAdmin ? " · admin" : ""}</span>`;
   $("#dataStamp").textContent = S.meta ? `Base: ${fmtStamp(S.meta.gerado)} · Receita ${S.meta.mes_receita || ""}` : "—";
 }
 function render() {
