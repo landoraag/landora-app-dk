@@ -691,18 +691,21 @@ function wireMapa() {
   $("#mCities").addEventListener("click", (e) => { const b = e.target.closest("[data-mc]"); if (!b) return; pref.set("mapCity", b.dataset.mc); map.fitBounds(cb[b.dataset.mc]); $("#mCities").querySelectorAll("[data-mc]").forEach((x) => x.setAttribute("aria-pressed", x === b)); });
   if (cb[start]) map.fitBounds(cb[start]); else map.setView([-23.98, -48.87], 13);
   const pts = L.layerGroup().addTo(map); const ord = { C: 0, B: 1, A: 2 };
+  // Pontos pequenos com a cidade inteira na tela e um pouco maiores ao aproximar.
+  const rad = (f) => { const z = map.getZoom(); const r = z >= 17 ? 5 : z >= 16 ? 4 : z >= 15 ? 3.2 : z >= 14 ? 2.6 : 2.2; return f === "A" ? r + 0.6 : r; };
   const draw = () => {
     pts.clearLayers(); let n = 0;
     const base = $("#mUseF")?.checked ? filterLeads() : allLeads().filter((l) => !l.x);
     for (const l of base.slice().sort((a, b) => (ord[a.f] ?? 1) - (ord[b.f] ?? 1))) {
       if (l.lat == null) continue; n++;
       const inF = stageOf(l) !== "novo" || F(l).fav; const c = l._manual ? col("manual") : col(l.f.toLowerCase());
-      L.circleMarker([l.lat, l.lon], { radius: l.f === "A" ? 6 : 5, color: inF ? col("ink") : c, weight: inF ? 2.5 : 1, fillColor: c, fillOpacity: 0.85 })
+      L.circleMarker([l.lat, l.lon], { radius: rad(l.f), color: inF ? col("ink") : c, weight: inF ? 1.6 : 0.6, fillColor: c, fillOpacity: 0.9, _f: l.f })
         .on("click", () => openLead(leadKey(l))).bindTooltip(`${l.n} · ${l.r}`, { direction: "top" }).addTo(pts);
     }
     const mc = $("#mCount"); if (mc) mc.textContent = `${n.toLocaleString("pt-BR")} no mapa`;
   };
   draw(); S._mapRedraw = draw;
+  map.on("zoomend", () => pts.eachLayer((m) => m.setRadius(rad(m.options._f))));
   $("#mUseF").addEventListener("change", (e) => { pref.set("mapUseFilter", e.target.checked); draw(); });
   let adding = false; const addBtn = $("#mAdd");
   const setAdding = (v) => { adding = v; addBtn.setAttribute("aria-pressed", v); addBtn.classList.toggle("pri", v); addBtn.textContent = v ? "Clique no mapa…" : "+ Adicionar no mapa"; map.getContainer().style.cursor = v ? "crosshair" : ""; };

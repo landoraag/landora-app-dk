@@ -532,7 +532,8 @@ def cmd_export(cfg):
             "pl": w.get("plataforma", ""), "ob": w.get("obs", ""), "vs": w.get("status", ""), "vd": w.get("data", ""),
             "cs": l["conferir_site"], "pq": l["porque"], "x": l["excluir"], "lat": lat, "lon": lon, "gp": prec,
         }.items() if v not in ("", None, [], 0) or k in ("s", "w")})
-    meta = {"gerado": datetime.datetime.now().isoformat(timespec="minutes"), "mes_receita": rec.get("mes", ""),
+    from zoneinfo import ZoneInfo
+    meta = {"gerado": datetime.datetime.now(ZoneInfo("America/Sao_Paulo")).isoformat(timespec="minutes"),  # horário de Brasília, com fuso "mes_receita": rec.get("mes", ""),
             "cidades": json.load(open(cfg)), "total": len(out)}
     jsave("data/leads.json", {"meta": meta, "leads": out})
     print("export ok", len(out), "->", "data/leads.json", os.path.getsize("data/leads.json") // 1024, "KB")
