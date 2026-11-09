@@ -229,3 +229,32 @@ select option{background:#0f131c;color:var(--ink)}
   .tabbar a[aria-current="page"]{color:var(--blue-light)}
   main{padding-block:20px 96px}
 }
+
+/* ===================== Celular: menu hambúrguer no lugar da barra inferior ===================== */
+.mtop,.side-scrim{display:none}
+.tabbar{display:none!important}
+@media (max-width:900px){
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:rgba(10,10,10,.85)}
+  .mtop{display:flex;align-items:center;gap:10px;position:sticky;top:env(safe-area-inset-top,0px);z-index:700;height:52px;
+    padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+    background:rgba(10,10,10,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
+  .mtop-btn{width:40px;height:40px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:#0f131c;color:var(--ink);cursor:pointer;padding:0}
+  .mtop-btn svg{width:20px;height:20px}
+  .mtop-btn:hover,.mtop-btn:focus-visible{border-color:var(--blue-light);box-shadow:0 0 14px var(--glow);outline:none}
+  .mtop-title{font-family:var(--f-display);font-weight:600;font-size:1rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mtop-logo{height:22px;width:auto;max-width:110px;object-fit:contain;opacity:.9}
+  .app{grid-template-columns:1fr}
+  .side{display:block;position:fixed;top:0;bottom:0;left:0;z-index:860;height:100%;
+    padding:calc(10px + env(safe-area-inset-top,0px)) 0 calc(10px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));
+    transform:translateX(-110%);transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s linear .26s;visibility:hidden}
+  .side-panel{width:min(280px,82vw);overflow-y:auto}
+  .app.menu-open .side{transform:none;visibility:visible;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s}
+  .side-scrim{display:block;position:fixed;inset:0;z-index:850;background:rgba(3,5,10,.6);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s}
+  .app.menu-open .side-scrim{opacity:1;pointer-events:auto}
+  main{padding-block:14px 28px}
+  /* o nome da aba já está na barra do topo: some o título e o texto explicativo */
+  .head>div:first-child>h2,.head>div:first-child>p{display:none}
+  .head:not(:has(.btn,label,input,select)){display:none}
+  .head{justify-content:flex-start}
+}
+@media (max-width:900px) and (prefers-reduced-motion:reduce){.side,.side-scrim{transition:none}}

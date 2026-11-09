@@ -272,18 +272,23 @@ function waitingScreen() {
 
 // ============================== estrutura ==============================
 function shell() {
-  $("#root").innerHTML = `<div class="app"><aside class="side">
+  $("#root").innerHTML = `<header class="mtop"><button class="mtop-btn" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><span class="mtop-title" id="mTitle"></span><img class="mtop-logo" src="/logomarca.png" alt="Landora"></header>
+  <div class="app" id="app"><div class="side-scrim" id="scrim"></div><aside class="side" id="side">
     <div class="side-panel"><div class="brand"><img src="/logomarca.png" alt="Landora"><small>Radar de Prospecção</small></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot"><div class="me-chip" id="meChip"></div><span id="dataStamp">—</span><button class="btn sm ghost" id="logout" style="justify-content:flex-start;padding-left:8px">Sair</button></div>
-  </div></aside><main><div class="wrap" id="view"></div></main></div><nav class="tabbar" id="tabbar"></nav><div id="layer"></div>`;
+  </div></aside><main><div class="wrap" id="view"></div></main></div><div id="layer"></div>`;
   $("#logout").addEventListener("click", () => signOut(S.fb.auth));
+  $("#menuBtn").addEventListener("click", () => setMenu(!$("#app").classList.contains("menu-open")));
+  $("#scrim").addEventListener("click", () => setMenu(false));
+  $("#nav").addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
 }
 function route() { const h = (location.hash || "").slice(1); return ROUTES.some((r) => r.k === h) ? h : "inicio"; }
 function renderSidebar() {
   const r = route();
   const links = ROUTES.map((x) => `<a href="#${x.k}" ${x.k === r ? 'aria-current="page"' : ""}>${icon(x.i)}<span>${x.l}</span></a>`).join("");
-  $("#nav").innerHTML = links; $("#tabbar").innerHTML = links;
+  $("#nav").innerHTML = links;
+  const cur = ROUTES.find((x) => x.k === r); if ($("#mTitle")) $("#mTitle").textContent = cur ? cur.l : "";
   const me = S.perfis[uid()] || S.perfil || {};
   $("#meChip").innerHTML = `<span class="dot" style="background:var(--blue-light);box-shadow:0 0 8px var(--glow)"></span><span>${esc(me.apelido || me.nome || S.user.email)}${S.isAdmin ? " · admin" : ""}</span>`;
   $("#dataStamp").textContent = S.meta ? `Base: ${fmtStamp(S.meta.gerado)} · Receita ${S.meta.mes_receita || ""}` : "—";
@@ -659,7 +664,13 @@ function layer(html, wire) { const Lr = $("#layer"); Lr.innerHTML = html; Lr.que
 function closeLayer() { const Lr = $("#layer"); if (Lr) Lr.innerHTML = ""; S._open = null; S._typing = false; }
 function modal(inner, wire) { S._open = null; layer(`<div class="modal-bg"><div class="modal" role="dialog">${inner}</div></div>`, (Lr) => { Lr.querySelector(".modal-bg").addEventListener("click", (e) => { if (e.target.classList.contains("modal-bg")) closeLayer(); }); wire && wire(Lr); }); }
 function confirmBox(text, onYes) { modal(`<p style="margin:0">${esc(text)}</p><div class="row"><span class="sp"></span><button class="btn" data-close>Cancelar</button><button class="btn pri" id="yes">Confirmar</button></div>`, (m) => $("#yes", m).addEventListener("click", () => { closeLayer(); onYes(); })); }
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLayer(); if (e.key === "Enter" && e.target.classList?.contains("lead")) openLead(e.target.dataset.k); });
+// Menu lateral no celular (hambúrguer): abre por cima da tela e fecha ao escolher uma aba.
+function setMenu(open) {
+  const app = $("#app"); if (!app) return;
+  app.classList.toggle("menu-open", open); $("#menuBtn")?.setAttribute("aria-expanded", open);
+  $("#menuBtn")?.setAttribute("aria-label", open ? "Fechar menu" : "Abrir menu");
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { setMenu(false); closeLayer(); } if (e.key === "Enter" && e.target.classList?.contains("lead")) openLead(e.target.dataset.k); });
 
 // ============================== Mapa ==============================
 const slug = (t) => norm(t).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
