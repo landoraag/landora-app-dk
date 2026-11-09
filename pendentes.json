@@ -1,0 +1,545 @@
+{
+ "gerado": "2026-11-09T12:49-03:00",
+ "empresas": [
+  {
+   "cnpj": "34.512.697/0001-00",
+   "nome": "Unique Servicos",
+   "razao": "Michel Renan De Melo - Veiculos",
+   "ramo": "Revenda de Veículos",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Coronel Monteiro, 580 - Terreo - Jardim Maringa"
+  },
+  {
+   "cnpj": "63.495.939/0001-94",
+   "nome": "Invictos Veiculos",
+   "razao": "Bolao Veiculos Itapeva Ltda",
+   "ramo": "Revenda de Veículos",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Epaminondas Ferreira Lobo, 179 - Centro"
+  },
+  {
+   "cnpj": "48.429.145/0001-39",
+   "nome": "Stefani Camili Camargo Segobia",
+   "razao": "Stefani Camili Camargo Segobia Ltda",
+   "ramo": "Veterinária",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Maria Raimunda, 577 - Vila Aparecida"
+  },
+  {
+   "cnpj": "65.790.950/0001-02",
+   "nome": "F L Electric - Powering The Future",
+   "razao": "F L Electric Ltda",
+   "ramo": "Revenda de Motos",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Rua Carlos De Campos, 283 - Sala  1 - Centro"
+  },
+  {
+   "cnpj": "67.286.038/0001-43",
+   "nome": "Prestes Saude Estetica",
+   "razao": "Prestes Saude Estetica Ltda",
+   "ramo": "Estética",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Mario Prandini, 1497 - Jardim Ferrari"
+  },
+  {
+   "cnpj": "66.103.382/0001-97",
+   "nome": "Itapeva Alimentos Food",
+   "razao": "Itapeva Alimentos Food Ltda",
+   "ramo": "Delivery / Marmitaria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Doutor Pinheiro, 657 - Centro"
+  },
+  {
+   "cnpj": "30.457.391/0001-39",
+   "nome": "Agro Nino",
+   "razao": "Real Bichos Agropecuaria Ltda",
+   "ramo": "Pet Shop",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Benjamin Constant, 425 - Jardim Ferrari"
+  },
+  {
+   "cnpj": "30.705.226/0001-59",
+   "nome": "Nova Itapeva Veiculos",
+   "razao": "P.S.R. Pimenta",
+   "ramo": "Revenda de Veículos",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Praca Tito Livio Cerioni, 231 - Vila Aparecida"
+  },
+  {
+   "cnpj": "23.783.802/0001-10",
+   "nome": "Pizzaria Vittoria Ii",
+   "razao": "Benedito Claro Da Silva Filho",
+   "ramo": "Restaurante",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Praca Espiridiao Lucio Martins, 25 - Centro"
+  },
+  {
+   "cnpj": "11.862.680/0001-79",
+   "nome": "Ivo Lanches",
+   "razao": "Olivio Vieira Alves Machado",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Praca Carlos Flavio Vasconcelos, 158 - Parque Sao Jorge"
+  },
+  {
+   "cnpj": "14.119.284/0001-44",
+   "nome": "Restaurante Eloisa",
+   "razao": "K. R. Moreira Lemos Restaurante",
+   "ramo": "Restaurante",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Calcadao Alexandre Maia Leite, 19 - Centro"
+  },
+  {
+   "cnpj": "18.345.848/0001-18",
+   "nome": "Ponto Da Esfiha",
+   "razao": "Elivagno Santos Da Silva",
+   "ramo": "Restaurante",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Dona Paulina De Morais, 1347 - Jardim Maringa"
+  },
+  {
+   "cnpj": "20.087.009/0001-99",
+   "nome": "Ana Paula Lopes Maciel Albuquerque",
+   "razao": "Ana Paula Lopes Maciel Albuquerque",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Martinho Carneiro, 161 - Centro"
+  },
+  {
+   "cnpj": "27.022.388/0001-88",
+   "nome": "Pet Shop Piraju",
+   "razao": "Dalva Soares Moraes Racoes",
+   "ramo": "Pet Shop",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Rua Alexandre Balbino Catala, 18 - Centro"
+  },
+  {
+   "cnpj": "24.201.081/0001-56",
+   "nome": "R M Treinamento Fisico Funcional",
+   "razao": "Romerson De Mattos Treinamento Fisico Funcional",
+   "ramo": "Academia",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Rua 7 De Setembro, 64 - Centro"
+  },
+  {
+   "cnpj": "24.890.613/0001-00",
+   "nome": "Karina Personal",
+   "razao": "Karina De Cassia Rocha Carvalho",
+   "ramo": "Academia",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Paraguai, 326 - Jardim America Ii"
+  },
+  {
+   "cnpj": "24.501.680/0001-95",
+   "nome": "Paccola'S Car Garage",
+   "razao": "Paccola Veiculos Ltda",
+   "ramo": "Revenda de Veículos",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Rua 13 De Maio, 64 - Centro"
+  },
+  {
+   "cnpj": "27.838.765/0001-51",
+   "nome": "Itapevense - Com De Veiculos, Auto Vidros E Acessorios",
+   "razao": "Itapevense  - Comercio De Veiculos, Auto Vidros E Acessorios Ltda",
+   "ramo": "Revenda de Veículos",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Doutor Estelita Ribas, 60 - Parque Cimentolandia"
+  },
+  {
+   "cnpj": "30.024.884/0001-85",
+   "nome": "Joyce Correa",
+   "razao": "Joyce De Oliveira Da Silva Estetica",
+   "ramo": "Estética",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Avenida Papa Joao Paulo Ii, 61 - Sala  02 - Jardim Jurumirim"
+  },
+  {
+   "cnpj": "09.620.024/0001-18",
+   "nome": "Restaurante E Lanchonete Dona Chefa",
+   "razao": "Restaurante E Lanchonete Dona Chefa Ltda",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Pires Fleury, 412 - Centro"
+  },
+  {
+   "cnpj": "15.495.649/0001-06",
+   "nome": "Pastelaria Itapeva",
+   "razao": "Lanchonete L & M Ltda",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Gov Mario Covas, 250 - Box   12 - Centro"
+  },
+  {
+   "cnpj": "21.976.970/0001-05",
+   "nome": "Spazio Eventos",
+   "razao": "Spazio Eventos Sociedade Unipessoal Ltda",
+   "ramo": "Buffet / Eventos",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Estrada Estrada Vicinal Governador Mario Covas, 5947 - Bairro De Cima"
+  },
+  {
+   "cnpj": "17.209.063/0001-55",
+   "nome": "Maria Luiza Coser Strazzi",
+   "razao": "Maria Luiza Coser Strazzi",
+   "ramo": "Fisioterapia / Pilates",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Rua 15 De Novembro, 697 - Centro"
+  },
+  {
+   "cnpj": "30.064.634/0001-79",
+   "nome": "Top Churros",
+   "razao": "Adriana Simoes De Siqueira Santos",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Dona Paulina De Morais, 926 - Loja 01 - Jardim Maringa"
+  },
+  {
+   "cnpj": "30.151.628/0001-59",
+   "nome": "Genaro Refeicoes",
+   "razao": "Genaro Alimentacao Ltda",
+   "ramo": "Restaurante",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Jose Duch Vilar, 48 - Vila Aparecida"
+  },
+  {
+   "cnpj": "09.688.605/0001-91",
+   "nome": "Agro Nutri",
+   "razao": "Edivaldo Ferreira Oliveira",
+   "ramo": "Pet Shop",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Joao Augusto Lico, 60 - Slj   Parte Alta          Loja  Parte Terrea - Centro"
+  },
+  {
+   "cnpj": "19.503.329/0001-01",
+   "nome": "Agropecuaria Boa Esperanca",
+   "razao": "Osvaldo De Souza Jardim - Agropecuaria",
+   "ramo": "Pet Shop",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua 9 De Julho, 649 - Vila Sao Miguel"
+  },
+  {
+   "cnpj": "25.344.465/0001-90",
+   "nome": "Odonto Riso",
+   "razao": "Odonto Riso De Piraju Ltda",
+   "ramo": "Odontologia",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Rua Coronel Nhonho Braga, 465 - Sala  1 E 2 - Centro"
+  },
+  {
+   "cnpj": "17.111.107/0001-00",
+   "nome": "Pet Space",
+   "razao": "Flaviane Domingues Almeida",
+   "ramo": "Pet Shop",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Glicerio David Muzel, 187 - Loja  2 - Vila Ophelia"
+  },
+  {
+   "cnpj": "20.281.396/0001-08",
+   "nome": "Sushihausu",
+   "razao": "Nill Santos Comercio De Alimentos Ltda..",
+   "ramo": "Delivery / Marmitaria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Jose Pedro De Oliveira Campos, 708 - Jardim Beija-Flor"
+  },
+  {
+   "cnpj": "28.058.979/0001-78",
+   "nome": "Pet Shop Animal Feliz",
+   "razao": "Josiane Martins De Souza Moraes",
+   "ramo": "Pet Shop",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Rua Esteves Kristensen, 35 - Jardim Jurumirim"
+  },
+  {
+   "cnpj": "26.507.250/0001-06",
+   "nome": "Mais Sabor Lanchonete",
+   "razao": "Tiago Duarte Marques Ltda",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rodovia Pedro Rodrigues Garcia, 1307 - Alto Da Brancal"
+  },
+  {
+   "cnpj": "55.660.396/0001-95",
+   "nome": "Weliton Do Amaral Batista Alves",
+   "razao": "Weliton Do Amaral Batista Alves",
+   "ramo": "Delivery / Marmitaria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Professor Rubens Fernando De Almeida, 45 - Jardim Sao Francisco"
+  },
+  {
+   "cnpj": "56.020.477/0001-93",
+   "nome": "Paks Oticas",
+   "razao": "Paks Comercio De Artigos Oticas Ltda",
+   "ramo": "Ótica",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Mario Prandini, 195 - Centro"
+  },
+  {
+   "cnpj": "61.154.911/0001-68",
+   "nome": "Kava",
+   "razao": "Kava Servicos De Terraplanagem E Transporte Ltda",
+   "ramo": "Material de Construção",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Marcello Bertocco, 120 - Loteamento Moradas De Itapeva"
+  },
+  {
+   "cnpj": "33.811.097/0001-71",
+   "nome": "Grazys Boutique Intima",
+   "razao": "Grazys Boutique Intima Ltda",
+   "ramo": "Loja de Roupas",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Avenida Dr. Domingos Teodoro Gallo, 101 - Centro"
+  },
+  {
+   "cnpj": "39.482.056/0001-65",
+   "nome": "Amina Carla De Freitas Gargalho",
+   "razao": "Amina Carla De Freitas Gargalho",
+   "ramo": "Estética",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Anel Viario Mario Covas, 7214 - Bairro De Cima"
+  },
+  {
+   "cnpj": "42.817.223/0001-96",
+   "nome": "Maycon Da Silva",
+   "razao": "Maycon Da Silva",
+   "ramo": "Restaurante",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Alexandrino De Moraes, 292 - Jardim Maringa"
+  },
+  {
+   "cnpj": "43.861.041/0001-85",
+   "nome": "Agro Nutri Agropecuaria, Petshop E Banho E Tosa Ltda",
+   "razao": "Agro Nutri Agropecuaria, Petshop E Banho E Tosa Ltda",
+   "ramo": "Pet Shop",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Joao Augusto Lico, 60 - Terreoterreo - Centro"
+  },
+  {
+   "cnpj": "47.075.334/0001-98",
+   "nome": "55 Garage Estetica Automotiva",
+   "razao": "Jsw Servicos Automotivos Ltda",
+   "ramo": "Funilaria e Pintura",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Praca Teonilo Gomes Cardoso, 153 - Jardim Maringa"
+  },
+  {
+   "cnpj": "47.666.175/0001-04",
+   "nome": "Almeida Materiais De Construcao",
+   "razao": "Agnaldo Fogaca De Almeida Junior",
+   "ramo": "Material de Construção",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Roberto Butzer Filho, 126 - Loteamento Moradas De Itapeva"
+  },
+  {
+   "cnpj": "47.973.982/0001-61",
+   "nome": "Felipe G. De Araujo Cordeiro",
+   "razao": "Felipe G. De Araujo Cordeiro",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Geraldo Alckmin, 454 - Vila Nossa Senhora De Fatima"
+  },
+  {
+   "cnpj": "48.438.313/0001-52",
+   "nome": "Acros Psicologia E Psicanalise",
+   "razao": "Acros Psicologia E Psicanalise Ltda",
+   "ramo": "Psicologia",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Jose Lara, 280 - Jardim Virginia"
+  },
+  {
+   "cnpj": "51.855.412/0001-44",
+   "nome": "Liliane Espindola Guimaraes",
+   "razao": "Liliane Espindola Guimaraes",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Geraldo Alckmin, 519 - Bloco Cantina Unesp - Vila Nossa Senhora De Fatima"
+  },
+  {
+   "cnpj": "53.988.645/0001-40",
+   "nome": "Carlos Everton Del Anhol",
+   "razao": "Carlos Everton Del Anhol",
+   "ramo": "Restaurante",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rodovia Pedro Rodrigues Garcia, 1404 - Alto Da Brancal"
+  },
+  {
+   "cnpj": "54.136.846/0001-82",
+   "nome": "Pirafer",
+   "razao": "Pirafer Comercio De Ferragens E Acessorios Ltda",
+   "ramo": "Material de Construção",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Avenida Vereador Milton Spinola, 500 - Sala  2 - Vila Campos"
+  },
+  {
+   "cnpj": "56.080.646/0001-80",
+   "nome": "Oticas Vivace",
+   "razao": "Oticas Vivace - Comercio De Artigos Opticos Ltda",
+   "ramo": "Ótica",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Mario Prandini, 329 - Centro"
+  },
+  {
+   "cnpj": "56.224.895/0001-00",
+   "nome": "Oral Max Odontologia Ltda",
+   "razao": "Oral Max Odontologia Ltda",
+   "ramo": "Odontologia",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Coronel Queiroz, 392 - Centro"
+  },
+  {
+   "cnpj": "56.302.608/0001-25",
+   "nome": "Eletroar Manutencao Agricola",
+   "razao": "Alan Cristian Pinto",
+   "ramo": "Acessórios Automotivos",
+   "cidade": "Piraju",
+   "uf": "SP",
+   "endereco": "Avenida Ver. Milton Spinola, 480 - Vila Campos"
+  },
+  {
+   "cnpj": "56.427.000/0001-27",
+   "nome": "Gesse De Lima Mendes",
+   "razao": "Gesse De Lima Mendes",
+   "ramo": "Móveis Planejados / Marcenaria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Estrada Bairro Das Pedras, 0 - Das Pedras"
+  },
+  {
+   "cnpj": "52.647.764/0001-77",
+   "nome": "Dd Refrigeracoes",
+   "razao": "Mayra Dos Santos - Dd Refrigeracoes",
+   "ramo": "Acessórios Automotivos",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Gastao De Mesquita Filho, 0 - Vista Alegre Ii"
+  },
+  {
+   "cnpj": "35.785.533/0001-00",
+   "nome": "San Gesso E Esquadrias",
+   "razao": "San Gesso & Decoracoes Ltda",
+   "ramo": "Material de Construção",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Europa, 2197 - Jardim Europa"
+  },
+  {
+   "cnpj": "35.979.967/0001-41",
+   "nome": "Pet Shop Disney Ltda",
+   "razao": "Pet Shop Disney Ltda",
+   "ramo": "Pet Shop",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Lothar Leal, 131 - Conjunto Habitacional Tancredo Neves"
+  },
+  {
+   "cnpj": "36.242.984/0001-64",
+   "nome": "Academia Itapevacx Ltda.",
+   "razao": "Academia Itapevacx Ltda.",
+   "ramo": "Academia",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Antonio Galvao Dos Santos, 170 - Jardim Maringa"
+  },
+  {
+   "cnpj": "36.619.860/0001-55",
+   "nome": "Luan Gabriel Da Silva Oliveira",
+   "razao": "Luan Gabriel Da Silva Oliveira",
+   "ramo": "Salão / Barbearia",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Silei Benato De Almeida (Residencial Morada Do Bos, 45 - Bairro De Cima"
+  },
+  {
+   "cnpj": "33.461.227/0001-93",
+   "nome": "Jurandir Rozendo Da Silva",
+   "razao": "Jurandir Rozendo Da Silva",
+   "ramo": "Lanchonete / Hamburgueria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Armando Cavani, 87 - Conjunto Habitacional Danilo Lucano Gimenez"
+  },
+  {
+   "cnpj": "38.108.373/0001-53",
+   "nome": "Gordinho Films",
+   "razao": "Vinicius Duarte De Oliveira",
+   "ramo": "Acessórios Automotivos",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Higino Marques, 649 - Jardim Maringa"
+  },
+  {
+   "cnpj": "40.884.224/0001-28",
+   "nome": "Vera Lucia De Almeida Proenca",
+   "razao": "Vera Lucia De Almeida Proenca",
+   "ramo": "Delivery / Marmitaria",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Praca Carlos Flavio Vasconcelos, 226 - Parque Sao Jorge"
+  },
+  {
+   "cnpj": "44.623.282/0001-59",
+   "nome": "Abec - Associacao Batuira Esporte Clube",
+   "razao": "Abec - Associacao Batuira Esporte Clube",
+   "ramo": "Academia",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Avenida Doutor Jose Ermirio De Moraes, 2115 - Sala  02 - Centro"
+  },
+  {
+   "cnpj": "45.257.501/0001-96",
+   "nome": "Gustavo Grecco Araujo",
+   "razao": "Gustavo Grecco Araujo",
+   "ramo": "Salão / Barbearia",
+   "cidade": "Itapeva",
+   "uf": "SP",
+   "endereco": "Rua Capao Bonito, 595 - Vila Bom Jesus"
+  }
+ ]
+}
