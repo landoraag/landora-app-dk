@@ -1,6 +1,14 @@
 // Ícones de traço (estilo Lucide) em SVG inline: não precisa instalar nenhuma biblioteca.
 // Uso: <Icon name="chat" size={20} />  — a cor vem do `color` do elemento pai (currentColor).
 const PATHS = {
+  radar: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <path d="M12 12 18.4 5.6" />
+      <circle cx="15.5" cy="8" r="1" fill="currentColor" />
+    </>
+  ),
   pages: (
     <>
       <rect width="18" height="7" x="3" y="3" rx="1" />

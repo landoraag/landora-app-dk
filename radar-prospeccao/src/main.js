@@ -11,6 +11,26 @@ import {
 } from "firebase/firestore";
 import { connect } from "./fb.js";
 
+// Ícones (sprite SVG). Fica no JS para funcionar também quando o Radar é carregado dentro do app.
+const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-funnel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></symbol>
+  <symbol id="i-city" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l6-4v17M11 21V10h8v11M8 9v.01M8 13v.01M8 17v.01M15 14v.01M15 17v.01"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 11l4-4 3 3 3-3 4 4-7 7z"/><path d="M3 10l4 1M14 18l-3 3-8-8"/></symbol>
+  <symbol id="i-money" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+</svg>`;
+if (!document.getElementById("i-home")) document.body.insertAdjacentHTML("afterbegin", SPRITE);
+// Dentro do app Landora (aba Prospecção): sem menu próprio, abas compactas no topo.
+const EMBED = window.self !== window.top || new URLSearchParams(location.search).has("embed");
+if (EMBED) document.documentElement.classList.add("embed");
+
 // ============================== constantes ==============================
 const STAGES = [
   { k: "novo", l: "Novo" }, { k: "contatado", l: "Contatado" }, { k: "respondeu", l: "Respondeu" }, { k: "reuniao", l: "Reunião marcada" },
@@ -277,7 +297,7 @@ function shell() {
     <div class="side-panel"><div class="brand"><img src="/logomarca.png" alt="Landora"><small>Radar de Prospecção</small></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot"><div class="me-chip" id="meChip"></div><span id="dataStamp">—</span><button class="btn sm ghost" id="logout" style="justify-content:flex-start;padding-left:8px">Sair</button></div>
-  </div></aside><main><div class="wrap" id="view"></div></main></div><div id="layer"></div>`;
+  </div></aside><main><nav class="etabs" id="etabs" aria-label="Seções do Radar"></nav><div class="wrap" id="view"></div></main></div><div id="layer"></div>`;
   $("#logout").addEventListener("click", () => signOut(S.fb.auth));
   $("#menuBtn").addEventListener("click", () => setMenu(!$("#app").classList.contains("menu-open")));
   $("#scrim").addEventListener("click", () => setMenu(false));
@@ -288,6 +308,7 @@ function renderSidebar() {
   const r = route();
   const links = ROUTES.map((x) => `<a href="#${x.k}" ${x.k === r ? 'aria-current="page"' : ""}>${icon(x.i)}<span>${x.l}</span></a>`).join("");
   $("#nav").innerHTML = links;
+  if ($("#etabs")) $("#etabs").innerHTML = ROUTES.map((x) => `<a href="#${x.k}" ${x.k === r ? 'aria-current="page"' : ""}>${icon(x.i)}<span>${x.l}</span></a>`).join("");
   const cur = ROUTES.find((x) => x.k === r); if ($("#mTitle")) $("#mTitle").textContent = cur ? cur.l : "";
   const me = S.perfis[uid()] || S.perfil || {};
   $("#meChip").innerHTML = `<span class="dot" style="background:var(--blue-light);box-shadow:0 0 8px var(--glow)"></span><span>${esc(me.apelido || me.nome || S.user.email)}${S.isAdmin ? " · admin" : ""}</span>`;
