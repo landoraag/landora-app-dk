@@ -66,8 +66,8 @@ service cloud.firestore {
     }
 
     // ===================== Radar de Prospecção (pasta radar-prospeccao/) =====================
-    // Conta própria (e-mail e senha). Quem cria conta fica "aguardando aprovação" até um
-    // administrador do Radar aprovar. Administradores: radar_config/acesso → { admins: [e-mails] }.
+    // Conta própria (e-mail e senha). Quem já usa o app Landora entra direto; os demais ficam
+    // "aguardando aprovação" até um administrador do Radar aprovar. Administradores: radar_config/acesso → { admins: [e-mails] }.
     // O pipeline (GitHub Actions) usa a conta de serviço e não passa por estas regras.
     function radarAccessPath() {
       return /databases/$(database)/documents/radar_config/acesso;
@@ -78,8 +78,18 @@ service cloud.firestore {
     function radarProfile() {
       return /databases/$(database)/documents/radar_perfis/$(request.auth.uid);
     }
+    // Quem já usa o app Landora entra direto: precisa ter users/{uid} e estar na lista de acesso
+    // do app (config/access). Com a lista desligada, ninguém entra direto (qualquer conta poderia
+    // criar o próprio users/{uid}), e vale a aprovação manual.
+    function landoraAppUser() {
+      return locked() && isMember() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function radarBlocked() {
+      return exists(radarProfile()) && get(radarProfile()).data.get("bloqueado", false) == true;
+    }
     function radarMember() {
-      return radarAdmin() || (signedIn() && exists(radarProfile()) && get(radarProfile()).data.aprovado == true);
+      return radarAdmin() || (signedIn() && !radarBlocked()
+        && (landoraAppUser() || (exists(radarProfile()) && get(radarProfile()).data.aprovado == true)));
     }
     match /radar_config/acesso {
       allow read: if signedIn();
@@ -96,12 +106,14 @@ service cloud.firestore {
       allow read: if radarMember() || (signedIn() && request.auth.uid == uid);
       // Cada um cria o próprio perfil, sempre como não aprovado (ou aprovado, se for administrador).
       allow create: if signedIn() && request.auth.uid == uid
-        && (request.resource.data.aprovado == false || radarAdmin())
+        && (request.resource.data.aprovado == false || radarAdmin() || landoraAppUser())
+        && request.resource.data.get("bloqueado", false) == false
         && request.resource.data.papel in ["vendedor", "gestor"];
       // Cada um edita o próprio perfil, sem mudar aprovação nem papel; o administrador edita qualquer um.
       allow update: if radarAdmin() || (signedIn() && request.auth.uid == uid
         && request.resource.data.aprovado == resource.data.aprovado
-        && request.resource.data.papel == resource.data.papel);
+        && request.resource.data.papel == resource.data.papel
+        && request.resource.data.get("bloqueado", false) == resource.data.get("bloqueado", false));
       allow delete: if radarAdmin();
     }
     match /radar_base/{document=**} {
