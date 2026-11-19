@@ -1,0 +1,52 @@
+# Publica o Landora App (site + regras do Firestore) no Firebase Hosting SEM precisar do Codespace.
+# Como usar: GitHub → aba Actions → "App · publicar" → Run workflow (funciona também pelo celular).
+#
+# Precisa de 2 segredos do repositório (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT  (já existe, é o mesmo do Radar)
+#   APP_ENV_FILE              (novo) conteúdo do arquivo landora-app/.env, colado inteiro:
+#                             as linhas VITE_FIREBASE_*, VITE_CLOUDINARY_*, VITE_NOTIFY_URL etc.
+name: App · publicar
+
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: app-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landora-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: landora-app/package-lock.json
+      - name: Conferir os segredos
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ENVF: ${{ secrets.APP_ENV_FILE }}
+        run: |
+          [ -n "$SA" ] || { echo "::error::Falta o segredo FIREBASE_SERVICE_ACCOUNT"; exit 1; }
+          [ -n "$ENVF" ] || { echo "::error::Falta o segredo APP_ENV_FILE (conteúdo do landora-app/.env)"; exit 1; }
+      - run: npm ci
+      - name: Gerar o app
+        env:
+          ENVF: ${{ secrets.APP_ENV_FILE }}
+        run: |
+          printf '%s\n' "$ENVF" > .env
+          npm run build
+          rm -f .env
+      - name: Publicar
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx -y firebase-tools@13.35.1 deploy --only hosting,firestore:rules --project landora-app-dk --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"
