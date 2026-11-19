@@ -253,7 +253,8 @@ export class CallSession {
           /* processador encerrado */
         }
       };
-      return { track, close, setLevel };
+      const resume = () => (ctx.state === "running" ? Promise.resolve() : ctx.resume().catch(() => {}));
+      return { track, close, setLevel, resume };
     } catch (e) {
       close();
       throw e;
@@ -289,7 +290,7 @@ export class CallSession {
         if (this[failFlag]) continue;
         try {
           const chain = await start();
-          this._chains.set(chain.track, { raw, close: chain.close, setLevel: chain.setLevel });
+          this._chains.set(chain.track, { raw, close: chain.close, setLevel: chain.setLevel, resume: chain.resume });
           this.noiseEngine = name;
           return new MediaStream([chain.track]);
         } catch (e) {
@@ -341,6 +342,42 @@ export class CallSession {
     await this._setLocalTrack("audio", fresh);
     this._stopAudioTrack(old);
     await this._push();
+  }
+
+  // Celular/tablet: quando o app vai para segundo plano (ou a tela apaga), o sistema corta o microfone
+  // e suspende o anti-ruído. Ao voltar, a faixa pode estar encerrada, travada em "mudo" ou só produzindo
+  // silêncio — e a pessoa ficava ouvindo a call sem conseguir falar. Isto acorda ou reabre o microfone
+  // sozinho, mantendo ligado/desligado como estava. Devolve true se reabriu.
+  async ensureMic() {
+    if (this.closed || this._recovering) return false;
+    const cur = this.local.audio;
+    if (!cur) return false; // entrou sem microfone: a pessoa liga no 🎤
+    const chain = this._chains.get(cur);
+    const raw = (chain ? chain.raw.getAudioTracks()[0] : cur) || cur;
+    chain?.resume?.(); // acorda o anti-ruído suspenso
+    // Travada em "mudo" (o sistema ainda não devolveu o microfone): dá 2 conferências antes de reabrir.
+    this._mutedTicks = raw.muted ? (this._mutedTicks || 0) + 1 : 0;
+    const dead = cur.readyState === "ended" || raw.readyState === "ended" || this._mutedTicks >= 3;
+    if (!dead) return false;
+    this._recovering = true;
+    try {
+      const wasOn = cur.enabled;
+      const s = await this._getMic();
+      const fresh = s.getAudioTracks()[0];
+      if (!fresh) return false;
+      fresh.enabled = wasOn;
+      this.notice = "";
+      await this._setLocalTrack("audio", fresh);
+      this._stopAudioTrack(cur);
+      this._mutedTicks = 0;
+      await this._push();
+      return true;
+    } catch (e) {
+      console.warn("Não consegui reabrir o microfone em segundo plano:", e); // tenta de novo na próxima
+      return false;
+    } finally {
+      this._recovering = false;
+    }
   }
 
   // ---------- referências do Firestore ----------

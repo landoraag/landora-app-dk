@@ -16,7 +16,7 @@ let wasmBinaryPromise = null;
 // O caminho original ganha um pequeno atraso para ficar alinhado com o da IA (evita som "metálico").
 const RNNOISE_DELAY_S = 0.01;
 
-// Recebe a faixa "crua" do microfone e devolve { track, close, setLevel } com a faixa já limpa.
+// Recebe a faixa "crua" do microfone e devolve { track, close, setLevel, resume } com a faixa já limpa.
 export async function createDenoiser(rawTrack, level = 80) {
   const ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" }); // o RNNoise exige 48 kHz
   try {
@@ -49,6 +49,8 @@ export async function createDenoiser(rawTrack, level = 80) {
     return {
       track: dest.stream.getAudioTracks()[0],
       setLevel,
+      // O celular suspende o processamento quando o app vai para segundo plano: isto o acorda.
+      resume: () => (ctx.state === "running" ? Promise.resolve() : ctx.resume().catch(() => {})),
       close() {
         try {
           node.destroy?.();

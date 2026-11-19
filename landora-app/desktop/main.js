@@ -30,11 +30,19 @@ function createWindow() {
     icon: path.join(__dirname, "build", "icon.png"),
     backgroundColor: "#0a0a0a",
     autoHideMenuBar: true,
+    show: false, // só aparece depois de maximizar (evita piscar a janela pequena)
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
       backgroundThrottling: false,
     },
+  });
+
+  // Abre já maximizado (janela cheia, com a barra de tarefas visível): o painel foi feito para essa
+  // área e, numa janela menor, aparecia a barra de rolagem na lateral.
+  win.once("ready-to-show", () => {
+    win.maximize();
+    win.show();
   });
 
   win.loadURL(APP_URL);

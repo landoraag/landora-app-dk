@@ -187,7 +187,11 @@ export function CallProvider({ children }) {
 
   // Fechar a aba / sair do app encerra a presença na call.
   useEffect(() => {
-    const onHide = () => sessionRef.current?.leave();
+    // No celular o "pagehide" também dispara ao ir para segundo plano (persisted): aí NÃO sai da call.
+    const onHide = (e) => {
+      if (e?.persisted) return;
+      sessionRef.current?.leave();
+    };
     window.addEventListener("pagehide", onHide);
     return () => {
       window.removeEventListener("pagehide", onHide);
@@ -307,6 +311,52 @@ export function CallProvider({ children }) {
   useEffect(() => {
     if (status !== "live") exitPip();
   }, [status, exitPip]);
+
+  // Segundo plano no celular/tablet: o sistema corta o microfone. Ao voltar (e a cada poucos segundos
+  // enquanto o app está aberto) confere o microfone e o som e reabre o que o sistema derrubou.
+  useEffect(() => {
+    if (status !== "live") return undefined;
+    const check = () => {
+      getAudioCtx(); // acorda o som da call se o sistema suspendeu
+      sessionRef.current?.ensureMic().then((reopened) => reopened && bump());
+    };
+    const onVis = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pageshow", check);
+    window.addEventListener("focus", check);
+    window.addEventListener("online", check);
+    const i = setInterval(() => document.visibilityState === "visible" && check(), 2000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pageshow", check);
+      window.removeEventListener("focus", check);
+      window.removeEventListener("online", check);
+      clearInterval(i);
+    };
+  }, [status]);
+
+  // Avisa ao sistema que há uma call em andamento (ajuda o Android/iOS a manter o áudio da call vivo
+  // e mostra "Em call" na tela de bloqueio).
+  useEffect(() => {
+    const ms = typeof navigator !== "undefined" ? navigator.mediaSession : null;
+    if (!ms) return undefined;
+    try {
+      if (status === "live" && typeof MediaMetadata !== "undefined") {
+        ms.metadata = new MediaMetadata({ title: active?.name || "Call", artist: "Landora" });
+        ms.playbackState = "playing";
+      }
+    } catch {
+      /* navegador sem Media Session */
+    }
+    return () => {
+      try {
+        ms.playbackState = "none";
+        if (status === "live") ms.metadata = null;
+      } catch {
+        /* nada */
+      }
+    };
+  }, [status, active?.name]);
 
   // Alguns navegadores pausam o som até um toque na página: retoma no próximo clique.
   useEffect(() => {
